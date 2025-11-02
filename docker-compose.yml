@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: pmdb
+      POSTGRES_USER: pmuser
+      POSTGRES_PASSWORD: pmsecret
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: ./backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=db;Database=pmdb;Username=pmuser;Password=pmsecret
+      - JWT__Key=DevSecretKeyDontUseInProd
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    volumes: 
+      - ./backend/uploads:/app/uploads
+
+  web:
+    build:
+      context: ./frontend
+    environment:
+      - VITE_API_URL=http://api:5000/api
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
