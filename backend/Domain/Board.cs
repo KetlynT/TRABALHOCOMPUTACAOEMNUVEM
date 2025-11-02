@@ -1,12 +1,16 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ProjectManagement.Api.Domain;
-public class Board
+namespace ProjectManagement.Api.Domain
 {
-    [Key]
-    public Guid Id { get; set; }
-    public string Name { get; set; } = null!;
-    public Guid ProjectId { get; set; }
-    public Project? Project { get; set; }
-    public ICollection<TaskItem> Tasks { get; set; } = new List<TaskItem>();
+    public class Board
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        [Required]
+        [MaxLength(100)]
+        public string Name { get; set; } = string.Empty;
+        public int Position { get; set; }
+        public Guid ProjectId { get; set; }
+        public Project? Project { get; set; }
+        public List<TaskItem> Tasks { get; set; } = new();
+    }
 }

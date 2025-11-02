@@ -1,12 +1,19 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace ProjectManagement.Api.Domain;
-public class ActivityLog
+namespace ProjectManagement.Api.Domain
 {
-    [Key]
-    public Guid Id { get; set; }
-    public string Action { get; set; } = null!;
-    public string? ActorName { get; set; }
-    public DateTime When { get; set; } = DateTime.UtcNow;
-    public string? Metadata { get; set; }
+    public class ActivityLog
+    {
+        public Guid Id { get; set; } = Guid.NewGuid();
+        [Required]
+        public string Description { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+        [Required]
+        public string UserId { get; set; }
+        public ApplicationUser? User { get; set; }
+        public Guid? ProjectId { get; set; }
+        public Project? Project { get; set; }
+        public Guid? TaskItemId { get; set; }
+        public TaskItem? TaskItem { get; set; }
+    }
 }

@@ -12,7 +12,7 @@ using ProjectManagement.Api.Data;
 namespace ProjectManagement.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251102212827_InitialCreate")]
+    [Migration("20251102231020_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -163,20 +163,30 @@ namespace ProjectManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Action")
+                    b.Property<string>("Description")
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<string>("ActorName")
-                        .HasColumnType("text");
+                    b.Property<Guid?>("ProjectId")
+                        .HasColumnType("uuid");
 
-                    b.Property<string>("Metadata")
-                        .HasColumnType("text");
+                    b.Property<Guid?>("TaskItemId")
+                        .HasColumnType("uuid");
 
-                    b.Property<DateTime>("When")
+                    b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ProjectId");
+
+                    b.HasIndex("TaskItemId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("ActivityLogs");
                 });
@@ -256,7 +266,11 @@ namespace ProjectManagement.Api.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("ProjectId")
                         .HasColumnType("uuid");
@@ -274,7 +288,11 @@ namespace ProjectManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("AuthorName")
+                    b.Property<string>("AuthorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -284,11 +302,9 @@ namespace ProjectManagement.Api.Migrations
                     b.Property<Guid>("TaskItemId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Text")
-                        .IsRequired()
-                        .HasColumnType("text");
-
                     b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
 
                     b.HasIndex("TaskItemId");
 
@@ -309,9 +325,16 @@ namespace ProjectManagement.Api.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("OwnerId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Projects");
                 });
@@ -322,9 +345,6 @@ namespace ProjectManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("FileName")
                         .IsRequired()
                         .HasColumnType("text");
@@ -333,11 +353,14 @@ namespace ProjectManagement.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("FileType")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("TaskItemId")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("UploadedBy")
-                        .HasColumnType("text");
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -352,6 +375,9 @@ namespace ProjectManagement.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AssigneeId")
+                        .HasColumnType("text");
+
                     b.Property<Guid>("BoardId")
                         .HasColumnType("uuid");
 
@@ -361,15 +387,20 @@ namespace ProjectManagement.Api.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("text");
 
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasColumnType("text");
+                    b.Property<DateTime?>("DueDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("AssigneeId");
 
                     b.HasIndex("BoardId");
 
@@ -427,6 +458,29 @@ namespace ProjectManagement.Api.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ProjectManagement.Api.Domain.ActivityLog", b =>
+                {
+                    b.HasOne("ProjectManagement.Api.Domain.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId");
+
+                    b.HasOne("ProjectManagement.Api.Domain.TaskItem", "TaskItem")
+                        .WithMany()
+                        .HasForeignKey("TaskItemId");
+
+                    b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+
+                    b.Navigation("TaskItem");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ProjectManagement.Api.Domain.Board", b =>
                 {
                     b.HasOne("ProjectManagement.Api.Domain.Project", "Project")
@@ -440,19 +494,38 @@ namespace ProjectManagement.Api.Migrations
 
             modelBuilder.Entity("ProjectManagement.Api.Domain.Comment", b =>
                 {
+                    b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("ProjectManagement.Api.Domain.TaskItem", "TaskItem")
                         .WithMany("Comments")
                         .HasForeignKey("TaskItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Author");
+
                     b.Navigation("TaskItem");
+                });
+
+            modelBuilder.Entity("ProjectManagement.Api.Domain.Project", b =>
+                {
+                    b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
                 });
 
             modelBuilder.Entity("ProjectManagement.Api.Domain.TaskAttachment", b =>
                 {
                     b.HasOne("ProjectManagement.Api.Domain.TaskItem", "TaskItem")
-                        .WithMany()
+                        .WithMany("Attachments")
                         .HasForeignKey("TaskItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -462,11 +535,17 @@ namespace ProjectManagement.Api.Migrations
 
             modelBuilder.Entity("ProjectManagement.Api.Domain.TaskItem", b =>
                 {
+                    b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "Assignee")
+                        .WithMany()
+                        .HasForeignKey("AssigneeId");
+
                     b.HasOne("ProjectManagement.Api.Domain.Board", "Board")
                         .WithMany("Tasks")
                         .HasForeignKey("BoardId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Assignee");
 
                     b.Navigation("Board");
                 });
@@ -483,6 +562,8 @@ namespace ProjectManagement.Api.Migrations
 
             modelBuilder.Entity("ProjectManagement.Api.Domain.TaskItem", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("Comments");
                 });
 #pragma warning restore 612, 618

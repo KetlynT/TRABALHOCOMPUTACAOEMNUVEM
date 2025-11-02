@@ -13,21 +13,6 @@ namespace ProjectManagement.Api.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ActivityLogs",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Action = table.Column<string>(type: "text", nullable: false),
-                    ActorName = table.Column<string>(type: "text", nullable: true),
-                    When = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Metadata = table.Column<string>(type: "text", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ActivityLogs", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetRoles",
                 columns: table => new
                 {
@@ -65,20 +50,6 @@ namespace ProjectManagement.Api.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Projects",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
-                    Description = table.Column<string>(type: "text", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Projects", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -188,11 +159,33 @@ namespace ProjectManagement.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Projects",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: true),
+                    OwnerId = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Projects", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Projects_AspNetUsers_OwnerId",
+                        column: x => x.OwnerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Boards",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
                     ProjectId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
@@ -211,15 +204,22 @@ namespace ProjectManagement.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Title = table.Column<string>(type: "text", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Description = table.Column<string>(type: "text", nullable: true),
-                    Status = table.Column<string>(type: "text", nullable: false),
+                    Position = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     BoardId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    AssigneeId = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Tasks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Tasks_AspNetUsers_AssigneeId",
+                        column: x => x.AssigneeId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_Tasks_Boards_BoardId",
                         column: x => x.BoardId,
@@ -229,18 +229,56 @@ namespace ProjectManagement.Api.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ActivityLogs",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Description = table.Column<string>(type: "text", nullable: false),
+                    Timestamp = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UserId = table.Column<string>(type: "text", nullable: false),
+                    ProjectId = table.Column<Guid>(type: "uuid", nullable: true),
+                    TaskItemId = table.Column<Guid>(type: "uuid", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_ActivityLogs", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_ActivityLogs_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_ActivityLogs_Projects_ProjectId",
+                        column: x => x.ProjectId,
+                        principalTable: "Projects",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_ActivityLogs_Tasks_TaskItemId",
+                        column: x => x.TaskItemId,
+                        principalTable: "Tasks",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Comments",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TaskItemId = table.Column<Guid>(type: "uuid", nullable: false),
-                    AuthorName = table.Column<string>(type: "text", nullable: false),
-                    Text = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    AuthorId = table.Column<string>(type: "text", nullable: false),
+                    TaskItemId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Comments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Comments_AspNetUsers_AuthorId",
+                        column: x => x.AuthorId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
                         name: "FK_Comments_Tasks_TaskItemId",
                         column: x => x.TaskItemId,
@@ -254,11 +292,11 @@ namespace ProjectManagement.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TaskItemId = table.Column<Guid>(type: "uuid", nullable: false),
-                    FileName = table.Column<string>(type: "text", nullable: false),
                     FilePath = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UploadedBy = table.Column<string>(type: "text", nullable: true)
+                    FileName = table.Column<string>(type: "text", nullable: false),
+                    FileType = table.Column<string>(type: "text", nullable: true),
+                    UploadedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    TaskItemId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -270,6 +308,21 @@ namespace ProjectManagement.Api.Migrations
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ActivityLogs_ProjectId",
+                table: "ActivityLogs",
+                column: "ProjectId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ActivityLogs_TaskItemId",
+                table: "ActivityLogs",
+                column: "TaskItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ActivityLogs_UserId",
+                table: "ActivityLogs",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -314,14 +367,29 @@ namespace ProjectManagement.Api.Migrations
                 column: "ProjectId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Comments_AuthorId",
+                table: "Comments",
+                column: "AuthorId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Comments_TaskItemId",
                 table: "Comments",
                 column: "TaskItemId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Projects_OwnerId",
+                table: "Projects",
+                column: "OwnerId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_TaskAttachments_TaskItemId",
                 table: "TaskAttachments",
                 column: "TaskItemId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tasks_AssigneeId",
+                table: "Tasks",
+                column: "AssigneeId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Tasks_BoardId",
@@ -360,9 +428,6 @@ namespace ProjectManagement.Api.Migrations
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
                 name: "Tasks");
 
             migrationBuilder.DropTable(
@@ -370,6 +435,9 @@ namespace ProjectManagement.Api.Migrations
 
             migrationBuilder.DropTable(
                 name: "Projects");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUsers");
         }
     }
 }

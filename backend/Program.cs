@@ -65,19 +65,11 @@ builder.Services.AddCors(options => {
 builder.Services.AddScoped<ActivityService>();
 
 var app = builder.Build();
-using (var scope = app.Services.CreateScope())
-{
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    // aplicar migrations automaticamente em dev
-    db.Database.Migrate();
-}
-await SeedData.InitializeAsync(app.Services);
 
-// Ensure DB (in development only)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.EnsureCreated();
+    db.Database.Migrate();
 }
 
 if (app.Environment.IsDevelopment())

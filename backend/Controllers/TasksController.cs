@@ -1,84 +1,126 @@
-using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
 using ProjectManagement.Api.Services;
+using System.Security.Claims;
 
-namespace ProjectManagement.Api.Controllers;
-[ApiController]
-[Route("api/[controller]")]
-public class TasksController : ControllerBase
+namespace ProjectManagement.Api.Controllers
 {
-    private readonly AppDbContext _db;
-    private readonly ActivityService _activity;
-    public TasksController(AppDbContext db, ActivityService activity) { _db = db; _activity = activity; }
-
-    [HttpPost]
-    public async Task<IActionResult> Create(TaskItem task)
+    [Authorize]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TasksController : ControllerBase
     {
-        task.Id = Guid.NewGuid();
-        _db.Tasks.Add(task);
-        await _db.SaveChangesAsync();
-        await _activity.Log("TaskCreated", actorName: User?.Identity?.Name ?? "anonymous", metadata: new { taskId = task.Id, title = task.Title });
-        return CreatedAtAction(nameof(Get), new { id = task.Id }, task);
+        private readonly AppDbContext _context;
+        private readonly ActivityService _activityService;
+
+        public TasksController(AppDbContext context, ActivityService activityService)
+        {
+            _context = context;
+            _activityService = activityService;
+        }
+
+        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+        
+        [HttpPost]
+        public async Task<IActionResult> CreateTask([FromBody] TaskItem taskDto)
+        {
+            var board = await _context.Boards.FindAsync(taskDto.BoardId);
+            if (board == null)
+            {
+                return BadRequest("Quadro (Board) não encontrado.");
+            }
+
+            var task = new TaskItem
+            {
+                Title = taskDto.Title,
+                Description = taskDto.Description,
+                BoardId = taskDto.BoardId,
+                AssigneeId = taskDto.AssigneeId,
+                DueDate = taskDto.DueDate,
+                Position = (await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId)) + 1
+            };
+
+            _context.Tasks.Add(task);
+            await _context.SaveChangesAsync();
+            
+            var project = await _context.Boards
+                .Where(b => b.Id == task.BoardId)
+                .Select(b => b.Project)
+                .FirstOrDefaultAsync();
+            
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi criada.", GetUserId(), project?.Id, task.Id);
+
+            return Ok(task);
+        }
+
+        [HttpPost("{taskId}/comments")]
+        public async Task<IActionResult> AddComment(Guid taskId, [FromBody] Comment commentDto)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+            {
+                return NotFound("Tarefa não encontrada.");
+            }
+
+            var comment = new Comment
+            {
+                Content = commentDto.Content,
+                TaskItemId = taskId,
+                AuthorId = GetUserId()
+            };
+
+            _context.Comments.Add(comment);
+            await _context.SaveChangesAsync();
+            
+            var project = await _context.Tasks
+                .Where(t => t.Id == taskId)
+                .Select(t => t.Board!.Project) 
+                .FirstOrDefaultAsync(); 
+            await _activityService.LogActivityAsync($"Novo comentário em '{task.Title}'.", GetUserId(), project?.Id, task.Id);
+
+            return Ok(comment);
+        }
+        
+        [HttpGet("{taskId}/comments")]
+        public async Task<IActionResult> GetComments(Guid taskId)
+        {
+            var comments = await _context.Comments
+                .Where(c => c.TaskItemId == taskId)
+                .Include(c => c.Author) 
+                .OrderBy(c => c.CreatedAt)
+                .Select(c => new 
+                {
+                    c.Id,
+                    c.Content,
+                    c.CreatedAt,
+                    AuthorName = c.Author != null ? c.Author.FullName : "Usuário"
+                })
+                .ToListAsync();
+
+            return Ok(comments);
+        }
+        
+        [HttpPut("{taskId}/move/{newBoardId}")]
+        public async Task<IActionResult> MoveTask(Guid taskId, Guid newBoardId)
+        {
+             var task = await _context.Tasks.FindAsync(taskId);
+             if (task == null) return NotFound("Tarefa não encontrada.");
+             
+             var board = await _context.Boards.FindAsync(newBoardId);
+             if (board == null) return BadRequest("Quadro de destino não encontrado.");
+             
+             var oldBoardId = task.BoardId;
+             task.BoardId = newBoardId;
+             
+             await _context.SaveChangesAsync();
+             
+             var project = await _context.Boards.Where(b => b.Id == newBoardId).Select(b => b.Project).FirstOrDefaultAsync();
+             await _activityService.LogActivityAsync($"Tarefa '{task.Title}' movida para '{board.Name}'.", GetUserId(), project?.Id, task.Id);
+
+             return Ok(task);
+        }
     }
-
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
-    {
-        var t = await _db.Tasks
-            .Include(x => x.Comments)
-            .Include(x => x.Board)
-            .Include(x => x.Board!.Project)
-            .FirstOrDefaultAsync(x => x.Id == id);
-
-        if (t == null) return NotFound();
-
-        var attachments = await _db.TaskAttachments
-            .Where(a => a.TaskItemId == id)
-            .Select(a => new { a.Id, a.FileName, a.FilePath, a.CreatedAt, a.UploadedBy })
-            .ToListAsync();
-
-        return Ok(new { task = t, attachments });
-    }
-
-
-    [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, TaskItem updated)
-    {
-        var existing = await _db.Tasks.FindAsync(id);
-        if (existing == null) return NotFound();
-        existing.Title = updated.Title;
-        existing.Description = updated.Description;
-        existing.Status = updated.Status;
-        existing.BoardId = updated.BoardId;
-        await _db.SaveChangesAsync();
-        return NoContent();
-    }
-
-    [HttpPost("{id}/comments")]
-    public async Task<IActionResult> AddComment(Guid id, Comment comment)
-    {
-        comment.Id = Guid.NewGuid();
-        comment.TaskItemId = id;
-        _db.Comments.Add(comment);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = id }, comment);
-    }
-
-    [HttpPost("reorder")]
-    public async Task<IActionResult> Reorder([FromBody] ReorderRequest req)
-    {
-        // req: taskId, destinationBoardId, destinationIndex
-        var task = await _db.Tasks.FindAsync(req.TaskId);
-        if (task == null) return NotFound();
-        task.BoardId = req.DestinationBoardId;
-        task.Status = req.DestinationStatus ?? task.Status;
-        await _db.SaveChangesAsync();
-        await _activity.Log("TaskMoved", User?.Identity?.Name, new { taskId = req.TaskId, destBoard = req.DestinationBoardId });
-        return Ok(task);
-    }
-    public record ReorderRequest(Guid TaskId, Guid DestinationBoardId, int DestinationIndex, string? DestinationStatus);
-
 }

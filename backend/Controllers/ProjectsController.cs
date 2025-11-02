@@ -1,37 +1,81 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
+using ProjectManagement.Api.Services;
+using System.Security.Claims;
 
-namespace ProjectManagement.Api.Controllers;
-[ApiController]
-[Route("api/[controller]")]
-public class ProjectsController : ControllerBase
+namespace ProjectManagement.Api.Controllers
 {
-    private readonly AppDbContext _db;
-    public ProjectsController(AppDbContext db) { _db = db; }
-
-    [HttpGet]
-    public async Task<IActionResult> GetAll()
+    [Authorize]
+    [ApiController]
+    [Route("api/[controller]")]
+    public class ProjectsController : ControllerBase
     {
-        var list = await _db.Projects.Include(p => p.Boards).ToListAsync();
-        return Ok(list);
-    }
+        private readonly AppDbContext _context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ActivityService _activityService;
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> Get(Guid id)
-    {
-        var project = await _db.Projects.Include(p => p.Boards).ThenInclude(b => b.Tasks).FirstOrDefaultAsync(p => p.Id == id);
-        if (project == null) return NotFound();
-        return Ok(project);
-    }
+        public ProjectsController(AppDbContext context, UserManager<ApplicationUser> userManager, ActivityService activityService)
+        {
+            _context = context;
+            _userManager = userManager;
+            _activityService = activityService;
+        }
 
-    [HttpPost]
-    public async Task<IActionResult> Create([FromBody] Project proj)
-    {
-        proj.Id = Guid.NewGuid();
-        _db.Projects.Add(proj);
-        await _db.SaveChangesAsync();
-        return CreatedAtAction(nameof(Get), new { id = proj.Id }, proj);
+        private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
+
+        [HttpGet]
+        public async Task<IActionResult> GetMyProjects()
+        {
+            var userId = GetUserId();
+            var projects = await _context.Projects
+                .Where(p => p.OwnerId == userId)
+                .OrderByDescending(p => p.CreatedAt)
+                .ToListAsync();
+            return Ok(projects);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetProject(Guid id)
+        {
+            var userId = GetUserId();
+            var project = await _context.Projects
+                .Include(p => p.Boards.OrderBy(b => b.Position))
+                .ThenInclude(b => b.Tasks.OrderBy(t => t.Position))
+                .FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
+
+            if (project == null)
+            {
+                return NotFound();
+            }
+            return Ok(project);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CreateProject([FromBody] Project projectDto)
+        {
+            var userId = GetUserId();
+            
+            var project = new Project
+            {
+                Name = projectDto.Name,
+                Description = projectDto.Description,
+                OwnerId = userId
+            };
+
+            project.Boards.Add(new Board { Name = "A Fazer", Position = 0 });
+            project.Boards.Add(new Board { Name = "Em Andamento", Position = 1 });
+            project.Boards.Add(new Board { Name = "Concluído", Position = 2 });
+            
+            _context.Projects.Add(project);
+            await _context.SaveChangesAsync();
+            
+            await _activityService.LogActivityAsync($"Projeto '{project.Name}' foi criado.", userId, project.Id);
+
+            return CreatedAtAction(nameof(GetProject), new { id = project.Id }, project);
+        }
     }
 }

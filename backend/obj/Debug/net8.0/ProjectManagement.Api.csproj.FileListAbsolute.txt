@@ -16,7 +16,6 @@ C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Deb
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Abstractions.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Design.dll
-C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.InMemory.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.EntityFrameworkCore.Relational.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.Extensions.DependencyModel.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\Microsoft.IdentityModel.Abstractions.dll
@@ -39,10 +38,6 @@ C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Deb
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\System.Composition.Runtime.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\System.Composition.TypedParts.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\System.IdentityModel.Tokens.Jwt.dll
-C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\xunit.abstractions.dll
-C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\xunit.assert.dll
-C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\xunit.core.dll
-C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\xunit.execution.dotnet.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\cs\Microsoft.CodeAnalysis.resources.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\de\Microsoft.CodeAnalysis.resources.dll
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\bin\Debug\net8.0\es\Microsoft.CodeAnalysis.resources.dll
@@ -102,6 +97,7 @@ C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Deb
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\ProjectManagement.Api.csproj.CoreCompileInputs.cache
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\ProjectManagement.Api.MvcApplicationPartsAssemblyInfo.cs
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\ProjectManagement.Api.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\ProjectManagement.Api.sourcelink.json
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\scopedcss\bundle\ProjectManagement.Api.styles.css
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\staticwebassets.build.json
 C:\Users\danie\OneDrive\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\backend\obj\Debug\net8.0\staticwebassets.development.json
