@@ -1,70 +1,69 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: 'http://localhost:5000/api',
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(
+  (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-});
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
-export const register = (userData) => api.post('/auth/register', userData);
-export const login = (credentials) => api.post('/auth/login', credentials);
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      const originalUrl = error.config.url;
+      if (!originalUrl.endsWith('/auth/login') && !originalUrl.endsWith('/auth/register')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
-export const changePassword = (passwordData) => {
-    return api.post('/auth/change-password', passwordData);
+const authApi = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  getProfile: () => api.get('/auth/profile'),
+  updateProfile: (data) => api.put('/auth/profile', data),
+  changePassword: (data) => api.put('/auth/change-password', data),
 };
 
-export const deleteAccount = () => {
-    return api.delete('/auth/delete-account');
+const projectApi = {
+  getProjects: () => api.get('/projects'),
+  getProjectDetails: (projectId) => api.get(`/projects/${projectId}`),
+  createProject: (projectData) => api.post('/projects', projectData),
+  deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
+  generateInviteCode: (projectId) => api.post(`/projects/${projectId}/invite`),
+  joinProject: (code) => api.post('/projects/join', { inviteCode: code }),
+  promoteMember: (projectId, userId) => api.post(`/projects/${projectId}/promote`, { userId }),
+  demoteMember: (projectId, userId) => api.post(`/projects/${projectId}/demote`, { userId }),
+  getActivityLog: (projectId) => api.get(`/projects/${projectId}/activity`),
 };
 
-export const checkSoleAdmin = () => {
-    return api.get('/auth/check-sole-admin');
+const taskApi = {
+  createTask: (taskData) => api.post('/tasks', taskData),
+  updateTask: (taskId, updates) => api.put(`/tasks/${taskId}`, updates),
+  deleteTask: (taskId) => api.delete(`/tasks/${taskId}`),
+  addCommentToTask: (taskId, commentData) => api.post(`/tasks/${taskId}/comments`, commentData),
+  reorderTasks: (reorderData) => api.patch('/tasks/reorder', reorderData),
 };
 
-export const getProjects = () => api.get('/projects');
-export const createProject = (projectData) => api.post('/projects', projectData);
-export const getProjectDetails = (projectId) => api.get(`/projects/${projectId}`);
-export const joinProject = (inviteCode) => api.post('/projects/join', { inviteCode });
-export const getProjectActivity = (projectId) => api.get(`/projects/${projectId}/activity`);
-export const deleteProject = (projectId) => api.delete(`/projects/${projectId}`);
-export const generateInviteCode = (projectId) => api.post(`/projects/${projectId}/generate-invite-code`);
-
-export const promoteMember = (projectId, userId) => api.post(`/projects/${projectId}/promote/${userId}`);
-export const demoteMember = (projectId, userId) => api.post(`/projects/${projectId}/demote/${userId}`);
-
-export const createTask = (taskData) => api.post('/tasks', taskData);
-export const updateTask = (taskId, taskData) => api.put(`/tasks/${taskId}`, taskData);
-export const deleteTask = (taskId) => api.delete(`/tasks/${taskId}`);
-export const reorderTasks = (reorderData) => api.patch('/tasks/reorder', reorderData);
-export const addCommentToTask = (taskId, commentData) => api.post(`/tasks/${taskId}/comments`, commentData);
-
-
-const apis = {
-    register,
-    login,
-    changePassword,
-    deleteAccount,
-    checkSoleAdmin,
-    getProjects,
-    createProject,
-    getProjectDetails,
-    joinProject,
-    getProjectActivity,
-    deleteProject,
-    generateInviteCode,
-    promoteMember,
-    demoteMember,
-    createTask,
-    updateTask,
-    deleteTask,
-    reorderTasks,
-    addCommentToTask,
+export default {
+  ...authApi,
+  ...projectApi,
+  ...taskApi,
 };
-
-export default apis;

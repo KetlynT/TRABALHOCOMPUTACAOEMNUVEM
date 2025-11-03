@@ -1,56 +1,77 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+
+export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState(() => {
+        try {
+            const storedUser = localStorage.getItem('user');
+            return storedUser ? JSON.parse(storedUser) : null;
+        } catch (error) {
+            return null;
+        }
+    });
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        const userName = localStorage.getItem('userName');
-        const userId = localStorage.getItem('userId');
-
-        if (token && userName && userId) {
-            setUser({ name: userName, id: userId });
+        if (token) {
+            api.getProfile()
+                .then(res => {
+                    setUser(res.data);
+                    localStorage.setItem('user', JSON.stringify(res.data));
+                })
+                .catch(() => {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    setUser(null);
+                })
+                .finally(() => {
+                    setLoading(false);
+                });
+        } else {
+            setLoading(false);
         }
-        setLoading(false);
     }, []);
 
     const login = async (credentials) => {
-        try {
-            const res = await api.login(credentials);
-            const { token, userName, userId } = res.data;
-            
-            localStorage.setItem('token', token);
-            localStorage.setItem('userName', userName);
-            localStorage.setItem('userId', userId);
-            
-            setUser({ name: userName, id: userId });
-            
-            navigate('/');
-        } catch (error) {
-            console.error('Falha no login:', error);
-            throw error;
-        }
+        const res = await api.login(credentials);
+        localStorage.setItem('token', res.data.token);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+        setUser(res.data.user);
+    };
+
+    const register = async (userData) => {
+        const res = await api.register(userData);
+        
     };
 
     const logout = () => {
         localStorage.removeItem('token');
-        localStorage.removeItem('userName');
-        localStorage.removeItem('userId');
+        localStorage.removeItem('user');
         setUser(null);
         navigate('/login');
     };
 
+    const refreshUser = async () => {
+        try {
+            const res = await api.getProfile();
+            setUser(res.data);
+            localStorage.setItem('user', JSON.stringify(res.data));
+        } catch (error) {
+            console.error("Failed to refresh user", error);
+            logout();
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, setUser, login, register, logout, refreshUser, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );
 };
-
-export const useAuth = () => useContext(AuthContext);

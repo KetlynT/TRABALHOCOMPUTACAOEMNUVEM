@@ -94,7 +94,7 @@ function Profile() {
                     Perfil e Configurações
                 </h1>
                 <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-                    Olá, {user?.name || 'Usuário'}
+                    Olá, {user?.fullName || 'Usuário'}
                 </p>
 
                 {message && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">{message}</div>}

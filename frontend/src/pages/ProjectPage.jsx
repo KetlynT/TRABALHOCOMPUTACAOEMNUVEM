@@ -62,6 +62,7 @@ function ProjectPage() {
                 sourceIndex: source.index,
                 destinationIndex: destination.index
             });
+            fetchProject();
         } catch (error) {
             setError('Falha ao mover tarefa.');
             fetchProject();
@@ -115,6 +116,11 @@ function ProjectPage() {
     if (!project) {
         return <div className="container mx-auto p-6 text-center text-gray-700 dark:text-gray-300">Projeto não encontrado.</div>;
     }
+
+    const boardOrder = ["A fazer", "Em andamento", "Concluída"];
+    const sortedBoards = [...project.boards].sort((a, b) => {
+        return boardOrder.indexOf(a.name) - boardOrder.indexOf(b.name);
+    });
 
     return (
         <>
@@ -177,12 +183,13 @@ function ProjectPage() {
 
                 <DragDropContext onDragEnd={onDragEnd}>
                     <div className="flex space-x-4 overflow-x-auto pb-4 mb-8">
-                        {project.boards.map(board => (
+                        {sortedBoards.map(board => (
                             <Board 
                                 key={board.id} 
                                 board={board} 
                                 onTaskAdded={fetchProject} 
                                 isAdmin={project.isAdmin}
+                                projectId={projectId}
                             />
                         ))}
                     </div>
@@ -193,38 +200,44 @@ function ProjectPage() {
                         Membros do Projeto
                     </h2>
                     <div className="space-y-3">
-                        {project.members.map(member => (
-                            <div key={member.userId} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
-                                <div>
-                                    <span className="font-medium text-gray-900 dark:text-gray-100">{member.fullName}</span>
-                                    {member.userId === project.creatorId && (
-                                        <span className="ml-2 text-xs py-0.5 px-2 bg-blue-200 text-blue-800 rounded-full">Criador</span>
-                                    )}
-                                    {member.isAdmin && (
-                                        <span className="ml-2 text-xs py-0.5 px-2 bg-green-200 text-green-800 rounded-full">Admin</span>
-                                    )}
-                                </div>
-                                {project.isAdmin && member.userId !== project.creatorId && (
-                                    <div className="flex gap-2">
-                                        {!member.isAdmin ? (
-                                            <button
-                                                onClick={() => handlePromote(member.userId)}
-                                                className="py-1 px-3 bg-green-500 text-white rounded-md text-sm hover:bg-green-600"
-                                            >
-                                                Promover
-                                            </button>
-                                        ) : (
-                                            <button
-                                                onClick={() => handleDemote(member.userId)}
-                                                className="py-1 px-3 bg-yellow-500 text-white rounded-md text-sm hover:bg-yellow-600"
-                                            >
-                                                Rebaixar
-                                            </button>
+                        {project.members.length <= 1 ? (
+                            <p className="text-gray-600 dark:text-gray-400">
+                                No momento há apenas você nesse projeto.
+                            </p>
+                        ) : (
+                            project.members.map(member => (
+                                <div key={member.userId} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-md">
+                                    <div>
+                                        <span className="font-medium text-gray-900 dark:text-gray-100">{member.fullName}</span>
+                                        {member.userId === project.creatorId && (
+                                            <span className="ml-2 text-xs py-0.5 px-2 bg-blue-200 text-blue-800 rounded-full">Criador</span>
+                                        )}
+                                        {member.isAdmin && (
+                                            <span className="ml-2 text-xs py-0.5 px-2 bg-green-200 text-green-800 rounded-full">Admin</span>
                                         )}
                                     </div>
-                                )}
-                            </div>
-                        ))}
+                                    {project.isAdmin && member.userId !== project.creatorId && (
+                                        <div className="flex gap-2">
+                                            {!member.isAdmin ? (
+                                                <button
+                                                    onClick={() => handlePromote(member.userId)}
+                                                    className="py-1 px-3 bg-green-500 text-white rounded-md text-sm hover:bg-green-600"
+                                                >
+                                                    Promover
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleDemote(member.userId)}
+                                                    className="py-1 px-3 bg-yellow-500 text-white rounded-md text-sm hover:bg-yellow-600"
+                                                >
+                                                    Rebaixar
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>

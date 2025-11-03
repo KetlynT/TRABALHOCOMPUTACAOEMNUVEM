@@ -20,7 +20,7 @@ const Header = () => {
                     {user ? (
                         <>
                             <span className="text-gray-700 dark:text-gray-300 hidden sm:block">
-                                Olá, {user?.name}
+                                Olá, {user?.fullName}
                             </span>
                             <ProfileDropdown />
                         </>

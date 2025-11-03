@@ -1,5 +1,6 @@
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedLayout from './components/ProtectedLayout';
+import PublicLayout from './components/PublicLayout';
 import Dashboard from './pages/Dashboard';
 import ProjectPage from './pages/ProjectPage';
 import ActivityLogPage from './pages/ActivityLogPage';
@@ -10,8 +11,10 @@ import Register from './pages/Register';
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/" element={<PublicLayout />}>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+      </Route>
       
       <Route path="/" element={<ProtectedLayout />}>
         <Route index element={<Dashboard />} />
@@ -19,6 +22,8 @@ function App() {
         <Route path="project/:projectId/activity" element={<ActivityLogPage />} />
         <Route path="profile" element={<Profile />} />
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

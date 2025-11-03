@@ -56,10 +56,43 @@ namespace ProjectManagement.Api.Controllers
                     return Unauthorized(new { message = "Usuário não encontrado." });
                 }
                 var token = GenerateJwtToken(user);
-                return Ok(new { token = token, userName = user.FullName ?? user.UserName, userId = user.Id });
+                
+                return Ok(new 
+                { 
+                    token = token, 
+                    user = new { 
+                        Id = user.Id, 
+                        FullName = user.FullName, 
+                        Email = user.Email 
+                    } 
+                });
             }
 
             return Unauthorized(new { message = "Login ou senha inválidos." });
+        }
+        
+        [Authorize]
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetProfile()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Usuário não encontrado.");
+            }
+            
+            return Ok(new 
+            { 
+                Id = user.Id, 
+                FullName = user.FullName, 
+                Email = user.Email 
+            });
         }
         
         [Authorize]

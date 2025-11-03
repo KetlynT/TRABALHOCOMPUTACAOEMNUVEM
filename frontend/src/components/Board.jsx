@@ -3,7 +3,7 @@ import { Draggable, Droppable } from 'react-beautiful-dnd';
 import TaskCard from './TaskCard';
 import api from '../services/api';
 
-function Board({ board, onTaskAdded, isAdmin }) {
+function Board({ board, onTaskAdded, isAdmin, projectId }) {
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [isAddingTask, setIsAddingTask] = useState(false);
 
@@ -27,7 +27,7 @@ function Board({ board, onTaskAdded, isAdmin }) {
     return (
         <div className="bg-gray-100 dark:bg-gray-700 rounded-lg shadow-md w-72 flex-shrink-0">
             <h3 className="text-lg font-semibold p-4 text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">
-                {board.name}
+                {board.name} ({board.tasks.length})
             </h3>
             <Droppable droppableId={board.id.toString()}>
                 {(provided) => (
@@ -39,7 +39,7 @@ function Board({ board, onTaskAdded, isAdmin }) {
                         {board.tasks.map((task, index) => (
                             <TaskCard 
                                 key={task.id} 
-                                task={task} 
+                                task={{ ...task, projectId: projectId, boardId: board.id }}
                                 index={index} 
                                 onTaskDeleted={onTaskAdded}
                                 isAdmin={isAdmin}
