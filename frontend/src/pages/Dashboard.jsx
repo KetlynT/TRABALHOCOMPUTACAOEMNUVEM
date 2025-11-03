@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
 
 function Dashboard() {
-  const { user, logout } = useAuth();
   const [projects, setProjects] = useState([]);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDesc, setNewProjectDesc] = useState('');
   const [joinCode, setJoinCode] = useState('');
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   useEffect(() => {
     api.get('/projects')
@@ -54,13 +51,7 @@ function Dashboard() {
 
   return (
     <div style={{ width: '100%', maxWidth: '900px', margin: '0 auto' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1>Dashboard</h1>
-        <div>
-          <span>Olá, {user?.fullName}!</span>
-          <button onClick={logout} style={{ marginLeft: '10px' }}>Sair</button>
-        </div>
-      </header>
+      <h1>Dashboard</h1>
       
       {error && <p style={{ color: 'red' }}>{error}</p>}
 

@@ -11,22 +11,6 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-}
-
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-  width: 100%;
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;
@@ -40,7 +24,162 @@ body {
   }
 }
 
-/* Estilos Adicionados */
+body {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--background-color, #242424);
+}
+
+#root {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.main-content {
+  flex-grow: 1;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.app-header {
+  width: 100%;
+  background-color: #333;
+  color: white;
+  padding: 0 2rem;
+  box-sizing: border-box;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1280px;
+  margin: 0 auto;
+  height: 60px;
+}
+
+.header-logo {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: white;
+  text-decoration: none;
+}
+
+.user-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.welcome-text {
+  font-size: 0.9em;
+  color: #f0f0f0;
+}
+
+.user-menu {
+  position: relative;
+}
+
+.user-icon-btn {
+  background-color: #555;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  font-size: 1.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-icon-btn:hover {
+  background-color: #777;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background-color: #fff;
+  color: #213547;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  z-index: 1001;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 8px 0;
+}
+
+.dropdown-item {
+  padding: 12px 16px;
+  text-decoration: none;
+  color: #213547;
+  display: block;
+  width: 100%;
+  text-align: left;
+  box-sizing: border-box;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.dropdown-item:hover {
+  background-color: #f4f5f7;
+  color: #0056b3;
+}
+
+.logout-btn-dropdown {
+  color: #f44336;
+}
+
+.logout-btn-dropdown:hover {
+  color: #d32f2f;
+  background-color: #f4f5f7;
+}
+
+.app-footer {
+  width: 100%;
+  background-color: #333;
+  color: #aaa;
+  padding: 20px 2rem;
+  text-align: center;
+  box-sizing: border-box;
+  margin-top: auto;
+}
+
+.auth-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 2rem;
+  box-sizing: border-box;
+}
 
 .kanban-boards {
   display: flex;
@@ -85,7 +224,6 @@ body {
   background-color: #f0f0f0;
 }
 
-/* Estilos do Modal */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -164,7 +302,6 @@ body {
   color: #777;
 }
 
-/* Outros */
 .page-header {
   display: flex;
   justify-content: space-between;
