@@ -1,12 +1,14 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
 using ProjectManagement.Api.DTOs;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.AspNetCore.Authorization;
+using System.Threading.Tasks;
 
 namespace ProjectManagement.Api.Controllers
 {
@@ -15,88 +17,122 @@ namespace ProjectManagement.Api.Controllers
     public class AuthController : ControllerBase
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IConfiguration _configuration;
+        private readonly AppDbContext _context;
 
-        public AuthController(UserManager<ApplicationUser> userManager, IConfiguration configuration)
+        public AuthController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager, IConfiguration configuration, AppDbContext context)
         {
             _userManager = userManager;
+            _signInManager = signInManager;
             _configuration = configuration;
+            _context = context;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto model)
+        public async Task<IActionResult> Register(RegisterDto model)
         {
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FullName = model.FullName
-            };
+            var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Name = model.Name };
             var result = await _userManager.CreateAsync(user, model.Password);
 
-            if (!result.Succeeded)
+            if (result.Succeeded)
             {
-                return BadRequest(result.Errors);
+                return Ok(new { message = "Registro bem-sucedido" });
             }
-
-            return Ok(new { Message = "Usuário registrado com sucesso!" });
+            return BadRequest(result.Errors);
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto model)
+        public async Task<IActionResult> Login(LoginDto model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
+            var result = await _signInManager.PasswordSignInAsync(model.Email, model.Password, false, false);
+
+            if (result.Succeeded)
             {
-                return Unauthorized(new { Message = "Email ou senha inválidos." });
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                var token = GenerateJwtToken(user);
+                return Ok(new { token = token, userName = user.Name, userId = user.Id });
             }
 
-            var token = GenerateJwtToken(user);
-
-            return Ok(new AuthResponseDto
-            {
-                Email = user.Email ?? "",
-                FullName = user.FullName ?? "",
-                Token = token
-            });
+            return Unauthorized(new { message = "Login ou senha inválidos." });
         }
         
         [Authorize]
-        [HttpGet("me")]
-        public async Task<IActionResult> GetCurrentUser()
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto model)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (userId == null) return Unauthorized();
-            
-            var user = await _userManager.FindByIdAsync(userId);
-            if (user == null) return NotFound();
-
-            return Ok(new 
+            if (!ModelState.IsValid)
             {
-                Id = user.Id,
-                Email = user.Email,
-                FullName = user.FullName,
-                Username = user.UserName
-            });
+                return BadRequest(ModelState);
+            }
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Usuário não encontrado.");
+            }
+
+            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Senha alterada com sucesso." });
+            }
+
+            return BadRequest(result.Errors);
         }
 
+        [Authorize]
+        [HttpDelete("delete-account")]
+        public async Task<IActionResult> DeleteAccount()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound("Usuário não encontrado.");
+            }
+
+            var result = await _userManager.DeleteAsync(user);
+
+            if (result.Succeeded)
+            {
+                return Ok(new { message = "Conta excluída com sucesso." });
+            }
+
+            return BadRequest(result.Errors);
+        }
 
         private string GenerateJwtToken(ApplicationUser user)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JWT:Key"] ?? "DevSecretKeyDontUseInProd"));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+            var claims = new List<Claim>
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email ?? ""),
-                new Claim(ClaimTypes.Name, user.UserName ?? ""),
-                new Claim("fullname", user.FullName ?? "")
+                new Claim(JwtRegisteredClaimNames.Email, user.Email),
+                new Claim(JwtRegisteredClaimNames.Name, user.Name),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var expires = DateTime.UtcNow.AddDays(Convert.ToDouble(_configuration["Jwt:ExpireDays"]));
+
             var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.Now.AddDays(1),
+                _configuration["Jwt:Issuer"],
+                _configuration["Jwt:Audience"],
+                claims,
+                expires: expires,
                 signingCredentials: creds
             );
 

@@ -1,71 +1,56 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api, { setAuthToken } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
-
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setAuthToken(token);
-      api.get('/auth/me')
-        .then(response => {
-          setUser(response.data);
-        })
-        .catch(() => {
-          localStorage.removeItem('token');
-          setAuthToken(null);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
-  }, []);
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        const userName = localStorage.getItem('userName');
+        const userId = localStorage.getItem('userId');
 
-  const login = async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
-    const { token, ...userData } = response.data;
-    
-    localStorage.setItem('token', token);
-    setAuthToken(token);
-    setUser(userData);
-    return userData;
-  };
+        if (token && userName && userId) {
+            setUser({ name: userName, id: userId });
+        }
+        setLoading(false);
+    }, []);
 
-  const register = async (fullName, username, email, password) => {
-    await api.post('/auth/register', { fullName, username, email, password });
-  };
+    const login = async (credentials) => {
+        try {
+            const res = await api.login(credentials);
+            const { token, userName, userId } = res.data;
+            
+            localStorage.setItem('token', token);
+            localStorage.setItem('userName', userName);
+            localStorage.setItem('userId', userId);
+            
+            setUser({ name: userName, id: userId });
+            
+            navigate('/');
+        } catch (error) {
+            console.error('Falha no login:', error);
+            throw error;
+        }
+    };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setAuthToken(null);
-    setUser(null);
-  };
+    const logout = () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('userName');
+        localStorage.removeItem('userId');
+        setUser(null);
+        navigate('/login');
+    };
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    logout,
-  };
-
-  if (loading) {
-    return <div>Carregando aplicação...</div>;
-  }
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+    return (
+        <AuthContext.Provider value={{ user, login, logout, loading }}>
+            {!loading && children}
+        </AuthContext.Provider>
+    );
 };
+
+export const useAuth = () => useContext(AuthContext);

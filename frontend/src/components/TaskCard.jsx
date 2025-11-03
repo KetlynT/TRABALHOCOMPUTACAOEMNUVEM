@@ -1,26 +1,13 @@
 import React from 'react';
-import { Draggable } from 'react-beautiful-dnd';
 
-function TaskCard({ task, index, onClick }) {
-  return (
-    <Draggable draggableId={task.id.toString()} index={index}>
-      {(provided, snapshot) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className="task-card"
-          onClick={() => onClick(task)}
-          style={{
-            ...provided.draggableProps.style,
-            backgroundColor: snapshot.isDragging ? '#e6f7ff' : '#ffffff',
-          }}
-        >
-          {task.title}
+function TaskCard({ task }) {
+    return (
+        <div className="bg-white dark:bg-gray-700 rounded-md shadow-md p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-600">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                {task.title}
+            </p>
         </div>
-      )}
-    </Draggable>
-  );
+    );
 }
 
 export default TaskCard;
