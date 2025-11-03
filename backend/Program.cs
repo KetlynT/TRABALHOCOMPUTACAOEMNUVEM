@@ -8,11 +8,18 @@ using System;
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Api.Domain;
 using ProjectManagement.Api.Services;
+using System.Text.Json.Serialization; // <- Adicionado
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuration
-builder.Services.AddControllers();
+// *** ESTA É A CORREÇÃO ***
+// Configuramos o serializador JSON para ignorar referências circulares
+builder.Services.AddControllers().AddJsonOptions(options =>
+{
+    options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+});
+
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "ProjectManagement API", Version = "v1" });
@@ -44,8 +51,13 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options => {
 .AddDefaultTokenProviders();
 
 // JWT
-var key = Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? "DevSecretKeyDontUseInProd");
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var key = Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? "ThisIsMyAwesomeDevSecretKey32Chr");
+
+builder.Services.AddAuthentication(options => {
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+})
   .AddJwtBearer(options => {
       options.TokenValidationParameters = new TokenValidationParameters
       {

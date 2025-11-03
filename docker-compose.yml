@@ -17,7 +17,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=db;Database=pmdb;Username=pmuser;Password=pmsecret
-      - JWT__Key=DevSecretKeyDontUseInProd
+      - JWT__Key=ThisIsMyAwesomeDevSecretKey32Chr
     depends_on:
       - db
     ports:

@@ -1,18 +1,26 @@
-import React, { useState } from "react";
-import TaskModal from "./TaskModal";
+import React from 'react';
+import { Draggable } from 'react-beautiful-dnd';
 
-export default function TaskCard({ task, onUpdated }) {
-  const [open, setOpen] = useState(false);
-
+function TaskCard({ task, index, onClick }) {
   return (
-    <>
-      <div style={{background:"#fff", padding:8, borderRadius:6, marginBottom:8, boxShadow:"0 1px 2px rgba(0,0,0,0.06)", cursor:"pointer"}}
-           onDoubleClick={() => setOpen(true)}>
-        <strong>{task.title}</strong>
-        <div style={{fontSize:12, color:"#666"}}>{task.description}</div>
-        <div style={{fontSize:11, color:"#888"}}>Status: {task.status}</div>
-      </div>
-      {open && <TaskModal taskId={task.id} onClose={() => { setOpen(false); if(onUpdated) onUpdated(); }} onSaved={() => { if(onUpdated) onUpdated(); }} />}
-    </>
+    <Draggable draggableId={task.id.toString()} index={index}>
+      {(provided, snapshot) => (
+        <div
+          ref={provided.innerRef}
+          {...provided.draggableProps}
+          {...provided.dragHandleProps}
+          className="task-card"
+          onClick={() => onClick(task)}
+          style={{
+            ...provided.draggableProps.style,
+            backgroundColor: snapshot.isDragging ? '#e6f7ff' : '#ffffff',
+          }}
+        >
+          {task.title}
+        </div>
+      )}
+    </Draggable>
   );
 }
+
+export default TaskCard;

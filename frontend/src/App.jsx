@@ -1,49 +1,53 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Dashboard from './pages/Dashboard';
-import ProjectPage from './pages/ProjectPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ProjectPage from './pages/ProjectPage';
+import ActivityLogPage from './pages/ActivityLogPage';
 
-function PrivateRoute({ children }) {
+function ProtectedRoute({ children }) {
   const { user } = useAuth();
-  return user ? children : <Navigate to="/login" />;
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  return children;
 }
 
-function App() {
+function AppRoutes() {
   const { user } = useAuth();
 
   return (
-    <div>
+    <Router>
       <Routes>
+        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+        <Route path="/register" element={user ? <Navigate to="/" /> : <Register />} />
+        
         <Route 
           path="/" 
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } 
+          element={<ProtectedRoute><Dashboard /></ProtectedRoute>} 
         />
         <Route 
           path="/project/:id" 
-          element={
-            <PrivateRoute>
-              <ProjectPage />
-            </PrivateRoute>
-          } 
-        />
-        
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to="/" /> : <Login />} 
+          element={<ProtectedRoute><ProjectPage /></ProtectedRoute>} 
         />
         <Route 
-          path="/register" 
-          element={user ? <Navigate to="/" /> : <Register />} 
+          path="/project/:id/activity" 
+          element={<ProtectedRoute><ActivityLogPage /></ProtectedRoute>} 
         />
+
+        <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
       </Routes>
-    </div>
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
   );
 }
 

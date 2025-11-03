@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
 using ProjectManagement.Api.Services;
+using ProjectManagement.Api.DTOs; // <- Adicionado
 using System.Security.Claims;
 
 namespace ProjectManagement.Api.Controllers
@@ -53,16 +54,45 @@ namespace ProjectManagement.Api.Controllers
             }
             return Ok(project);
         }
+        
+        [HttpGet("{id}/activity")]
+        public async Task<IActionResult> GetProjectActivity(Guid id)
+        {
+            var userId = GetUserId();
+            var projectExists = await _context.Projects.AnyAsync(p => p.Id == id && p.OwnerId == userId);
+            if (!projectExists)
+            {
+                return NotFound("Projeto não encontrado.");
+            }
+
+            var activities = await _context.ActivityLogs
+                .Where(a => a.ProjectId == id)
+                .Include(a => a.User)
+                .OrderByDescending(a => a.Timestamp)
+                .Select(a => new 
+                {
+                    a.Id,
+                    a.Description,
+                    a.Timestamp,
+                    UserName = a.User != null ? a.User.FullName : "Usuário"
+                })
+                .ToListAsync();
+            
+            return Ok(activities);
+        }
 
         [HttpPost]
-        public async Task<IActionResult> CreateProject([FromBody] Project projectDto)
+        // *** ESTA É A CORREÇÃO ***
+        // Alterado de [FromBody] Project projectDto para [FromBody] ProjectCreateDto dto
+        public async Task<IActionResult> CreateProject([FromBody] ProjectCreateDto dto)
         {
             var userId = GetUserId();
             
             var project = new Project
             {
-                Name = projectDto.Name,
-                Description = projectDto.Description,
+                // Usando o DTO
+                Name = dto.Name,
+                Description = dto.Description,
                 OwnerId = userId
             };
 

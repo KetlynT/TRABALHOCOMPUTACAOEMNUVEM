@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
+using ProjectManagement.Api.DTOs;
 using ProjectManagement.Api.Services;
 using System.Security.Claims;
 
@@ -24,6 +25,29 @@ namespace ProjectManagement.Api.Controllers
 
         private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
         
+        [HttpGet("{taskId}")]
+        public async Task<IActionResult> GetTask(Guid taskId)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.Assignee)
+                .FirstOrDefaultAsync(t => t.Id == taskId);
+
+            if (task == null)
+            {
+                return NotFound();
+            }
+            
+            return Ok(new 
+            {
+                task.Id,
+                task.Title,
+                task.Description,
+                task.DueDate,
+                task.BoardId,
+                AssigneeName = task.Assignee?.FullName
+            });
+        }
+
         [HttpPost]
         public async Task<IActionResult> CreateTask([FromBody] TaskItem taskDto)
         {
@@ -33,6 +57,8 @@ namespace ProjectManagement.Api.Controllers
                 return BadRequest("Quadro (Board) não encontrado.");
             }
 
+            var position = await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId);
+
             var task = new TaskItem
             {
                 Title = taskDto.Title,
@@ -40,7 +66,7 @@ namespace ProjectManagement.Api.Controllers
                 BoardId = taskDto.BoardId,
                 AssigneeId = taskDto.AssigneeId,
                 DueDate = taskDto.DueDate,
-                Position = (await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId)) + 1
+                Position = position
             };
 
             _context.Tasks.Add(task);
@@ -52,6 +78,32 @@ namespace ProjectManagement.Api.Controllers
                 .FirstOrDefaultAsync();
             
             await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi criada.", GetUserId(), project?.Id, task.Id);
+
+            return Ok(task);
+        }
+
+        [HttpPut("{taskId}")]
+        public async Task<IActionResult> UpdateTask(Guid taskId, [FromBody] TaskUpdateDto taskDto)
+        {
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+            {
+                return NotFound("Tarefa não encontrada.");
+            }
+
+            task.Title = taskDto.Title ?? task.Title;
+            task.Description = taskDto.Description;
+            task.DueDate = taskDto.DueDate;
+            task.AssigneeId = taskDto.AssigneeId;
+            
+            await _context.SaveChangesAsync();
+            
+            var project = await _context.Tasks
+                .Where(t => t.Id == taskId)
+                .Select(t => t.Board!.Project)
+                .FirstOrDefaultAsync();
+            
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi atualizada.", GetUserId(), project?.Id, task.Id);
 
             return Ok(task);
         }
@@ -103,24 +155,57 @@ namespace ProjectManagement.Api.Controllers
             return Ok(comments);
         }
         
-        [HttpPut("{taskId}/move/{newBoardId}")]
-        public async Task<IActionResult> MoveTask(Guid taskId, Guid newBoardId)
+        [HttpPost("reorder")]
+        public async Task<IActionResult> ReorderTasks([FromBody] TaskReorderDto reorderDto)
         {
-             var task = await _context.Tasks.FindAsync(taskId);
-             if (task == null) return NotFound("Tarefa não encontrada.");
-             
-             var board = await _context.Boards.FindAsync(newBoardId);
-             if (board == null) return BadRequest("Quadro de destino não encontrado.");
-             
-             var oldBoardId = task.BoardId;
-             task.BoardId = newBoardId;
-             
-             await _context.SaveChangesAsync();
-             
-             var project = await _context.Boards.Where(b => b.Id == newBoardId).Select(b => b.Project).FirstOrDefaultAsync();
-             await _activityService.LogActivityAsync($"Tarefa '{task.Title}' movida para '{board.Name}'.", GetUserId(), project?.Id, task.Id);
+            var task = await _context.Tasks.FindAsync(reorderDto.TaskId);
+            if (task == null) return NotFound("Tarefa não encontrada.");
 
-             return Ok(task);
+            var sourceBoardId = reorderDto.SourceBoardId;
+            var destBoardId = reorderDto.DestinationBoardId;
+            var destIndex = reorderDto.DestinationIndex;
+
+            var sourceTasks = await _context.Tasks
+                .Where(t => t.BoardId == sourceBoardId)
+                .OrderBy(t => t.Position)
+                .ToListAsync();
+
+            sourceTasks.Remove(task);
+
+            if (sourceBoardId == destBoardId)
+            {
+                sourceTasks.Insert(destIndex, task);
+                ReindexTasks(sourceTasks);
+            }
+            else
+            {
+                task.BoardId = destBoardId;
+                var destTasks = await _context.Tasks
+                    .Where(t => t.BoardId == destBoardId)
+                    .OrderBy(t => t.Position)
+                    .ToListAsync();
+                
+                destTasks.Insert(destIndex, task);
+                
+                ReindexTasks(sourceTasks);
+                ReindexTasks(destTasks);
+            }
+
+            await _context.SaveChangesAsync();
+            
+            var project = await _context.Boards.Where(b => b.Id == destBoardId).Select(b => b.Project).FirstOrDefaultAsync();
+            var board = await _context.Boards.FindAsync(destBoardId);
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' movida para '{board?.Name}'.", GetUserId(), project?.Id, task.Id);
+
+            return Ok();
+        }
+
+        private void ReindexTasks(List<TaskItem> tasks)
+        {
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                tasks[i].Position = i;
+            }
         }
     }
 }

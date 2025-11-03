@@ -14,5 +14,6 @@ namespace ProjectManagement.Api.Domain
         public ApplicationUser? Owner { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public List<Board> Boards { get; set; } = new();
+        public List<ActivityLog> ActivityLogs { get; set; } = new();
     }
 }
