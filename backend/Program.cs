@@ -8,12 +8,10 @@ using System;
 using Microsoft.AspNetCore.Identity;
 using ProjectManagement.Api.Domain;
 using ProjectManagement.Api.Services;
-using System.Text.Json.Serialization; // <- Adicionado
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// *** ESTA É A CORREÇÃO ***
-// Configuramos o serializador JSON para ignorar referências circulares
 builder.Services.AddControllers().AddJsonOptions(options =>
 {
     options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
@@ -75,6 +73,7 @@ builder.Services.AddCors(options => {
 });
 
 builder.Services.AddScoped<ActivityService>();
+builder.Services.AddScoped<ProjectAccessService>(); // <- Adicionado
 
 var app = builder.Build();
 

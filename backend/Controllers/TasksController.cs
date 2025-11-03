@@ -16,11 +16,13 @@ namespace ProjectManagement.Api.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ActivityService _activityService;
+        private readonly ProjectAccessService _accessService;
 
-        public TasksController(AppDbContext context, ActivityService activityService)
+        public TasksController(AppDbContext context, ActivityService activityService, ProjectAccessService accessService)
         {
             _context = context;
             _activityService = activityService;
+            _accessService = accessService;
         }
 
         private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
@@ -28,14 +30,17 @@ namespace ProjectManagement.Api.Controllers
         [HttpGet("{taskId}")]
         public async Task<IActionResult> GetTask(Guid taskId)
         {
+            var projectId = await _accessService.GetProjectIdFromTask(taskId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
+            {
+                return Forbid();
+            }
+
             var task = await _context.Tasks
                 .Include(t => t.Assignee)
                 .FirstOrDefaultAsync(t => t.Id == taskId);
 
-            if (task == null)
-            {
-                return NotFound();
-            }
+            if (task == null) return NotFound();
             
             return Ok(new 
             {
@@ -51,11 +56,14 @@ namespace ProjectManagement.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateTask([FromBody] TaskItem taskDto)
         {
-            var board = await _context.Boards.FindAsync(taskDto.BoardId);
-            if (board == null)
+            var projectId = await _accessService.GetProjectIdFromBoard(taskDto.BoardId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
             {
-                return BadRequest("Quadro (Board) não encontrado.");
+                return Forbid();
             }
+            
+            var board = await _context.Boards.FindAsync(taskDto.BoardId);
+            if (board == null) return BadRequest("Quadro (Board) não encontrado.");
 
             var position = await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId);
 
@@ -72,12 +80,7 @@ namespace ProjectManagement.Api.Controllers
             _context.Tasks.Add(task);
             await _context.SaveChangesAsync();
             
-            var project = await _context.Boards
-                .Where(b => b.Id == task.BoardId)
-                .Select(b => b.Project)
-                .FirstOrDefaultAsync();
-            
-            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi criada.", GetUserId(), project?.Id, task.Id);
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi criada.", GetUserId(), projectId, task.Id);
 
             return Ok(task);
         }
@@ -85,11 +88,14 @@ namespace ProjectManagement.Api.Controllers
         [HttpPut("{taskId}")]
         public async Task<IActionResult> UpdateTask(Guid taskId, [FromBody] TaskUpdateDto taskDto)
         {
-            var task = await _context.Tasks.FindAsync(taskId);
-            if (task == null)
+            var projectId = await _accessService.GetProjectIdFromTask(taskId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
             {
-                return NotFound("Tarefa não encontrada.");
+                return Forbid();
             }
+
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null) return NotFound("Tarefa não encontrada.");
 
             task.Title = taskDto.Title ?? task.Title;
             task.Description = taskDto.Description;
@@ -97,13 +103,7 @@ namespace ProjectManagement.Api.Controllers
             task.AssigneeId = taskDto.AssigneeId;
             
             await _context.SaveChangesAsync();
-            
-            var project = await _context.Tasks
-                .Where(t => t.Id == taskId)
-                .Select(t => t.Board!.Project)
-                .FirstOrDefaultAsync();
-            
-            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi atualizada.", GetUserId(), project?.Id, task.Id);
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi atualizada.", GetUserId(), projectId, task.Id);
 
             return Ok(task);
         }
@@ -111,11 +111,14 @@ namespace ProjectManagement.Api.Controllers
         [HttpPost("{taskId}/comments")]
         public async Task<IActionResult> AddComment(Guid taskId, [FromBody] Comment commentDto)
         {
-            var task = await _context.Tasks.FindAsync(taskId);
-            if (task == null)
+            var projectId = await _accessService.GetProjectIdFromTask(taskId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
             {
-                return NotFound("Tarefa não encontrada.");
+                return Forbid();
             }
+
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null) return NotFound("Tarefa não encontrada.");
 
             var comment = new Comment
             {
@@ -126,12 +129,7 @@ namespace ProjectManagement.Api.Controllers
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
-            
-            var project = await _context.Tasks
-                .Where(t => t.Id == taskId)
-                .Select(t => t.Board!.Project) 
-                .FirstOrDefaultAsync(); 
-            await _activityService.LogActivityAsync($"Novo comentário em '{task.Title}'.", GetUserId(), project?.Id, task.Id);
+            await _activityService.LogActivityAsync($"Novo comentário em '{task.Title}'.", GetUserId(), projectId, task.Id);
 
             return Ok(comment);
         }
@@ -139,6 +137,12 @@ namespace ProjectManagement.Api.Controllers
         [HttpGet("{taskId}/comments")]
         public async Task<IActionResult> GetComments(Guid taskId)
         {
+            var projectId = await _accessService.GetProjectIdFromTask(taskId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
+            {
+                return Forbid();
+            }
+
             var comments = await _context.Comments
                 .Where(c => c.TaskItemId == taskId)
                 .Include(c => c.Author) 
@@ -158,6 +162,19 @@ namespace ProjectManagement.Api.Controllers
         [HttpPost("reorder")]
         public async Task<IActionResult> ReorderTasks([FromBody] TaskReorderDto reorderDto)
         {
+            var projectId = await _accessService.GetProjectIdFromTask(reorderDto.TaskId);
+            if (!await _accessService.CanAccessProject(GetUserId(), projectId))
+            {
+                return Forbid();
+            }
+            
+            // Verifique se o quadro de destino também está no projeto
+            var destProjectId = await _accessService.GetProjectIdFromBoard(reorderDto.DestinationBoardId);
+            if(projectId != destProjectId)
+            {
+                return BadRequest("Não é possível mover tarefas entre projetos.");
+            }
+
             var task = await _context.Tasks.FindAsync(reorderDto.TaskId);
             if (task == null) return NotFound("Tarefa não encontrada.");
 
@@ -193,9 +210,8 @@ namespace ProjectManagement.Api.Controllers
 
             await _context.SaveChangesAsync();
             
-            var project = await _context.Boards.Where(b => b.Id == destBoardId).Select(b => b.Project).FirstOrDefaultAsync();
             var board = await _context.Boards.FindAsync(destBoardId);
-            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' movida para '{board?.Name}'.", GetUserId(), project?.Id, task.Id);
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' movida para '{board?.Name}'.", GetUserId(), projectId, task.Id);
 
             return Ok();
         }

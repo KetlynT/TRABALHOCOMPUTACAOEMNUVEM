@@ -9,11 +9,16 @@ namespace ProjectManagement.Api.Domain
         [MaxLength(100)]
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
+
+        [MaxLength(8)]
+        public string? InviteCode { get; set; }
+
         [Required]
         public string OwnerId { get; set; } = string.Empty;
         public ApplicationUser? Owner { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public List<Board> Boards { get; set; } = new();
         public List<ActivityLog> ActivityLogs { get; set; } = new();
+        public List<ProjectMember> Members { get; set; } = new();
     }
 }

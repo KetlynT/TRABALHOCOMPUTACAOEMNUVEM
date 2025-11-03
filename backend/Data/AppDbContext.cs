@@ -13,6 +13,8 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
     public DbSet<Comment> Comments => Set<Comment>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
     public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
+    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -41,5 +43,24 @@ public class AppDbContext : IdentityDbContext<ApplicationUser>
             .WithOne(a => a.TaskItem)
             .HasForeignKey(a => a.TaskItemId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProjectMember>()
+            .HasKey(pm => new { pm.ProjectId, pm.UserId });
+
+        modelBuilder.Entity<ProjectMember>()
+            .HasOne(pm => pm.Project)
+            .WithMany(p => p.Members)
+            .HasForeignKey(pm => pm.ProjectId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<ProjectMember>()
+            .HasOne(pm => pm.User)
+            .WithMany(u => u.ProjectMemberships)
+            .HasForeignKey(pm => pm.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+        
+        modelBuilder.Entity<Project>()
+            .HasIndex(p => p.InviteCode)
+            .IsUnique();
     }
 }

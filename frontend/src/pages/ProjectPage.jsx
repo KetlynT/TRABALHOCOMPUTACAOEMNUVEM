@@ -9,7 +9,8 @@ function ProjectPage() {
   const { id } = useParams();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
+  
+  const [newTaskTitles, setNewTaskTitles] = useState({});
   
   const [selectedTask, setSelectedTask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,11 +34,13 @@ function ProjectPage() {
 
   const handleCreateTask = async (e, boardId) => {
     e.preventDefault();
-    if (!newTaskTitle.trim()) return;
+    
+    const title = newTaskTitles[boardId] || ''; 
+    if (!title.trim()) return;
     
     try {
       const response = await api.post('/tasks', {
-        title: newTaskTitle,
+        title: title,
         boardId: boardId
       });
       
@@ -52,7 +55,11 @@ function ProjectPage() {
           return { ...prevProject, boards: updatedBoards };
       });
       
-      setNewTaskTitle('');
+      setNewTaskTitles(prevTitles => ({
+        ...prevTitles,
+        [boardId]: '' 
+      }));
+
     } catch (err) {
       console.error("Erro ao criar tarefa", err);
     }
@@ -128,6 +135,26 @@ function ProjectPage() {
     });
   };
 
+  const handleGenerateCode = async () => {
+    try {
+      const response = await api.post(`/projects/${id}/generate-invite-code`);
+      const code = response.data.inviteCode;
+      setProject(prev => ({ ...prev, inviteCode: code }));
+      alert(`Código de Convite: ${code}\n\nEnvie este código para seus colegas.`);
+    } catch (err) {
+      console.error("Erro ao gerar código", err);
+      alert("Erro ao gerar código. Apenas o dono do projeto pode fazer isso.");
+    }
+  };
+
+  const handleTitleChange = (e, boardId) => {
+    const { value } = e.target;
+    setNewTaskTitles(prevTitles => ({
+      ...prevTitles,
+      [boardId]: value
+    }));
+  };
+
   if (loading) return <div>Carregando projeto...</div>;
   if (!project) return <div>Projeto não encontrado.</div>;
 
@@ -135,7 +162,14 @@ function ProjectPage() {
     <div className="project-page" style={{ width: '100%', textAlign: 'left' }}>
       <div className="page-header">
         <Link to="/">&larr; Voltar para o Dashboard</Link>
-        <Link to={`/project/${id}/activity`} className="activity-link">Ver Histórico do Projeto</Link>
+        <div>
+          {project.isOwner && (
+            <button onClick={handleGenerateCode} style={{ marginRight: '10px' }}>
+              {project.inviteCode ? `Código: ${project.inviteCode}` : "Convidar"}
+            </button>
+          )}
+          <Link to={`/project/${id}/activity`} className="activity-link">Ver Atividades</Link>
+        </div>
       </div>
 
       <h1>{project.name}</h1>
@@ -153,8 +187,8 @@ function ProjectPage() {
                 <input 
                   type="text" 
                   placeholder="Nova tarefa..."
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  value={newTaskTitles[board.id] || ''}
+                  onChange={(e) => handleTitleChange(e, board.id)}
                   style={{ width: '100%', boxSizing: 'border-box' }}
                 />
                 <button type="submit" style={{ marginTop: '4px' }}>Adicionar</button>
