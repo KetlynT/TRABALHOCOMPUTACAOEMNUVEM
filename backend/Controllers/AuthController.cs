@@ -56,7 +56,7 @@ namespace ProjectManagement.Api.Controllers
                     return Unauthorized(new { message = "Usuário não encontrado." });
                 }
                 var token = GenerateJwtToken(user);
-                return Ok(new { token = token, userName = user.FullName, userId = user.Id });
+                return Ok(new { token = token, userName = user.FullName ?? user.UserName, userId = user.Id });
             }
 
             return Unauthorized(new { message = "Login ou senha inválidos." });

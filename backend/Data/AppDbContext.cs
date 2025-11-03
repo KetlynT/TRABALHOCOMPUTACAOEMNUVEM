@@ -2,65 +2,73 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ProjectManagement.Api.Domain;
 
-namespace ProjectManagement.Api.Data;
-public class AppDbContext : IdentityDbContext<ApplicationUser>
+namespace ProjectManagement.Api.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) {}
-
-    public DbSet<Project> Projects => Set<Project>();
-    public DbSet<Board> Boards => Set<Board>();
-    public DbSet<TaskItem> Tasks => Set<TaskItem>();
-    public DbSet<Comment> Comments => Set<Comment>();
-    public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
-    public DbSet<TaskAttachment> TaskAttachments => Set<TaskAttachment>();
-    public DbSet<ProjectMember> ProjectMembers => Set<ProjectMember>();
-
-
-    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public class AppDbContext : IdentityDbContext<ApplicationUser>
     {
-        base.OnModelCreating(modelBuilder);
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        modelBuilder.Entity<Project>()
-            .HasMany(p => p.Boards)
-            .WithOne(b => b.Project)
-            .HasForeignKey(b => b.ProjectId)
-            .OnDelete(DeleteBehavior.Cascade);
+        public DbSet<Project> Projects { get; set; }
+        public DbSet<Board> Boards { get; set; }
+        public DbSet<TaskItem> Tasks { get; set; }
+        public DbSet<ProjectMember> ProjectMembers { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
+        public DbSet<Comment> Comments { get; set; }
+        public DbSet<TaskAttachment> TaskAttachments { get; set; }
 
-        modelBuilder.Entity<Board>()
-            .HasMany(b => b.Tasks)
-            .WithOne(t => t.Board)
-            .HasForeignKey(t => t.BoardId)
-            .OnDelete(DeleteBehavior.Cascade);
+        protected override void OnModelCreating(ModelBuilder builder)
+        {
+            base.OnModelCreating(builder);
+            
+            builder.Entity<ProjectMember>()
+                .HasKey(pm => new { pm.ProjectId, pm.UserId });
 
-        modelBuilder.Entity<TaskItem>()
-            .HasMany(t => t.Comments)
-            .WithOne(c => c.TaskItem)
-            .HasForeignKey(c => c.TaskItemId)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        modelBuilder.Entity<TaskItem>()
-            .HasMany(t => t.Attachments)
-            .WithOne(a => a.TaskItem)
-            .HasForeignKey(a => a.TaskItemId)
-            .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Project>()
+                .HasOne(p => p.Owner)
+                .WithMany(u => u.OwnedProjects)
+                .HasForeignKey(p => p.OwnerId)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Restrict);
+            
+            builder.Entity<ProjectMember>()
+                .HasOne(pm => pm.Project)
+                .WithMany(p => p.Members)
+                .HasForeignKey(pm => pm.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<ProjectMember>()
-            .HasKey(pm => new { pm.ProjectId, pm.UserId });
+            builder.Entity<ProjectMember>()
+                .HasOne(pm => pm.User)
+                .WithMany(u => u.ProjectMemberships)
+                .HasForeignKey(pm => pm.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<ProjectMember>()
-            .HasOne(pm => pm.Project)
-            .WithMany(p => p.Members)
-            .HasForeignKey(pm => pm.ProjectId)
-            .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<Board>()
+                .HasOne(b => b.Project)
+                .WithMany(p => p.Boards)
+                .HasForeignKey(b => b.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-        modelBuilder.Entity<ProjectMember>()
-            .HasOne(pm => pm.User)
-            .WithMany(u => u.ProjectMemberships)
-            .HasForeignKey(pm => pm.UserId)
-            .OnDelete(DeleteBehavior.Cascade);
-        
-        modelBuilder.Entity<Project>()
-            .HasIndex(p => p.InviteCode)
-            .IsUnique();
+            builder.Entity<TaskItem>()
+                .HasOne(t => t.Board)
+                .WithMany(b => b.Tasks)
+                .HasForeignKey(t => t.BoardId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<ActivityLog>()
+                .HasOne(a => a.Project)
+                .WithMany(p => p.ActivityLogs)
+                .HasForeignKey(a => a.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            builder.Entity<ActivityLog>()
+                .HasOne(a => a.User)
+                .WithMany()
+                .HasForeignKey(a => a.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+            
+            builder.Entity<Project>()
+                .HasIndex(p => p.InviteCode)
+                .IsUnique();
+        }
     }
 }

@@ -10,5 +10,7 @@ namespace ProjectManagement.Api.Domain
         public string? FullName { get; set; }
         
         public List<ProjectMember> ProjectMemberships { get; set; } = new();
+
+        public List<Project> OwnedProjects { get; set; } = new();
     }
 }

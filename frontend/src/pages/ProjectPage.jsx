@@ -62,7 +62,6 @@ function ProjectPage() {
                 sourceIndex: source.index,
                 destinationIndex: destination.index
             });
-            fetchProject();
         } catch (error) {
             setError('Falha ao mover tarefa.');
             fetchProject();

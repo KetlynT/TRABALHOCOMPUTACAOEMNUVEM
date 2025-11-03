@@ -81,7 +81,17 @@ namespace ProjectManagement.Api.Controllers
                     p.Id,
                     p.Name,
                     p.Description,
-                    p.Boards,
+                    Boards = p.Boards.Select(b => new {
+                        b.Id,
+                        b.Name,
+                        b.Position,
+                        Tasks = b.Tasks.Select(t => new {
+                            t.Id,
+                            t.Title,
+                            t.Description,
+                            t.Position
+                        })
+                    }),
                     p.InviteCode,
                     CreatorId = p.OwnerId,
                     CreatorName = p.Owner != null ? p.Owner.FullName : "Dono Desconhecido",

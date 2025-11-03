@@ -491,7 +491,8 @@ namespace ProjectManagement.Api.Migrations
                 {
                     b.HasOne("ProjectManagement.Api.Domain.Project", "Project")
                         .WithMany("ActivityLogs")
-                        .HasForeignKey("ProjectId");
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("ProjectManagement.Api.Domain.TaskItem", "TaskItem")
                         .WithMany()
@@ -500,7 +501,7 @@ namespace ProjectManagement.Api.Migrations
                     b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.SetNull)
                         .IsRequired();
 
                     b.Navigation("Project");
@@ -543,9 +544,9 @@ namespace ProjectManagement.Api.Migrations
             modelBuilder.Entity("ProjectManagement.Api.Domain.Project", b =>
                 {
                     b.HasOne("ProjectManagement.Api.Domain.ApplicationUser", "Owner")
-                        .WithMany()
+                        .WithMany("OwnedProjects")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Owner");
@@ -600,6 +601,8 @@ namespace ProjectManagement.Api.Migrations
 
             modelBuilder.Entity("ProjectManagement.Api.Domain.ApplicationUser", b =>
                 {
+                    b.Navigation("OwnedProjects");
+
                     b.Navigation("ProjectMemberships");
                 });
 
