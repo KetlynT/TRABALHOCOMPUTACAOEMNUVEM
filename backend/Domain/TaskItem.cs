@@ -18,5 +18,6 @@ namespace ProjectManagement.Api.Domain
         public ApplicationUser? Assignee { get; set; }
         public List<Comment> Comments { get; set; } = new();
         public List<TaskAttachment> Attachments { get; set; } = new();
+        public DateTime? DeletedAt { get; set; }
     }
 }

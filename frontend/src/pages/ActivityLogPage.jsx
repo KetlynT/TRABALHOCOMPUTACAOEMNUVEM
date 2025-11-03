@@ -12,7 +12,7 @@ function ActivityLogPage() {
         const fetchActivities = async () => {
             try {
                 setLoading(true);
-                const res = await api.getProjectActivity(projectId);
+                const res = await api.getActivityLog(projectId);
                 setActivities(res.data);
             } catch (err) {
                 setError('Falha ao carregar atividades.');

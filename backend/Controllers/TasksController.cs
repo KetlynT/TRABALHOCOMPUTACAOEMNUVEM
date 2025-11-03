@@ -38,7 +38,7 @@ namespace ProjectManagement.Api.Controllers
 
             var task = await _context.Tasks
                 .Include(t => t.Assignee)
-                .FirstOrDefaultAsync(t => t.Id == taskId);
+                .FirstOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
 
             if (task == null) return NotFound();
             
@@ -65,7 +65,7 @@ namespace ProjectManagement.Api.Controllers
             var board = await _context.Boards.FindAsync(taskDto.BoardId);
             if (board == null) return BadRequest("Quadro (Board) não encontrado.");
 
-            var position = await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId);
+            var position = await _context.Tasks.CountAsync(t => t.BoardId == taskDto.BoardId && t.DeletedAt == null);
 
             var task = new TaskItem
             {
@@ -94,7 +94,7 @@ namespace ProjectManagement.Api.Controllers
                 return Forbid();
             }
 
-            var task = await _context.Tasks.FindAsync(taskId);
+            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
             if (task == null) return NotFound("Tarefa não encontrada.");
 
             task.Title = taskDto.Title ?? task.Title;
@@ -124,13 +124,35 @@ namespace ProjectManagement.Api.Controllers
             {
                 return NotFound("Tarefa não encontrada.");
             }
+            
+            if (task.DeletedAt.HasValue)
+            {
+                return Ok(new { message = "Tarefa já excluída." });
+            }
 
-            _context.Tasks.Remove(task);
-            await _context.SaveChangesAsync();
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // 1. Fazer o Soft Delete
+                task.DeletedAt = DateTime.UtcNow;
+                _context.Tasks.Update(task);
+                
+                // 2. Logar a atividade (usando o método que NÃO salva)
+                _activityService.LogActivity($"Tarefa '{task.Title}' foi excluída.", userId, projectId, task.Id);
+                
+                // 3. Salvar TUDO (Task Update + Activity Log)
+                await _context.SaveChangesAsync();
+                
+                // 4. Commitar a transação
+                await transaction.CommitAsync();
 
-            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi excluída.", userId, projectId, task.Id);
-
-            return Ok(new { message = "Tarefa excluída com sucesso." });
+                return Ok(new { message = "Tarefa excluída com sucesso." });
+            }
+            catch (Exception)
+            {
+                await transaction.RollbackAsync();
+                return StatusCode(500, new { message = "Falha ao excluir tarefa. A operação foi revertida." });
+            }
         }
 
         [HttpPost("{taskId}/comments")]
@@ -142,7 +164,7 @@ namespace ProjectManagement.Api.Controllers
                 return Forbid();
             }
 
-            var task = await _context.Tasks.FindAsync(taskId);
+            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
             if (task == null) return NotFound("Tarefa não encontrada.");
 
             var comment = new Comment
@@ -167,6 +189,9 @@ namespace ProjectManagement.Api.Controllers
             {
                 return Forbid();
             }
+
+            var taskExists = await _context.Tasks.AnyAsync(t => t.Id == taskId && t.DeletedAt == null);
+            if (!taskExists) return NotFound("Tarefa não encontrada.");
 
             var comments = await _context.Comments
                 .Where(c => c.TaskItemId == taskId)
@@ -199,7 +224,7 @@ namespace ProjectManagement.Api.Controllers
                 return BadRequest("Não é possível mover tarefas entre projetos.");
             }
 
-            var task = await _context.Tasks.FindAsync(reorderDto.TaskId);
+            var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == reorderDto.TaskId && t.DeletedAt == null);
             if (task == null) return NotFound("Tarefa não encontrada.");
 
             var sourceBoardId = reorderDto.SourceBoardId;
@@ -207,7 +232,7 @@ namespace ProjectManagement.Api.Controllers
             var destIndex = reorderDto.DestinationIndex;
 
             var sourceTasks = await _context.Tasks
-                .Where(t => t.BoardId == sourceBoardId)
+                .Where(t => t.BoardId == sourceBoardId && t.DeletedAt == null)
                 .OrderBy(t => t.Position)
                 .ToListAsync();
 
@@ -222,7 +247,7 @@ namespace ProjectManagement.Api.Controllers
             {
                 task.BoardId = destBoardId;
                 var destTasks = await _context.Tasks
-                    .Where(t => t.BoardId == destBoardId)
+                    .Where(t => t.BoardId == destBoardId && t.DeletedAt == null)
                     .OrderBy(t => t.Position)
                     .ToListAsync();
                 

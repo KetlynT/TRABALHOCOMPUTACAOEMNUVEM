@@ -69,9 +69,8 @@ function Profile() {
         try {
             await api.deleteAccount();
             setIsConfirmModalOpen(false);
-            alert('Conta excluída com sucesso.');
             logout();
-            navigate('/login');
+            navigate('/login', { state: { message: 'Conta excluída com sucesso.' } });
         } catch (err) {
             setError(err.response?.data?.message || 'Erro ao excluir a conta.');
             setIsConfirmModalOpen(false);

@@ -40,6 +40,8 @@ const authApi = {
   getProfile: () => api.get('/auth/profile'),
   updateProfile: (data) => api.put('/auth/profile', data),
   changePassword: (data) => api.put('/auth/change-password', data),
+  checkSoleAdmin: () => api.get('/auth/check-sole-admin'),
+  deleteAccount: () => api.delete('/auth/delete-account'),
 };
 
 const projectApi = {
@@ -49,8 +51,8 @@ const projectApi = {
   deleteProject: (projectId) => api.delete(`/projects/${projectId}`),
   generateInviteCode: (projectId) => api.post(`/projects/${projectId}/invite`),
   joinProject: (code) => api.post('/projects/join', { inviteCode: code }),
-  promoteMember: (projectId, userId) => api.post(`/projects/${projectId}/promote`, { userId }),
-  demoteMember: (projectId, userId) => api.post(`/projects/${projectId}/demote`, { userId }),
+  promoteMember: (projectId, userId) => api.post(`/projects/${projectId}/promote/${userId}`),
+  demoteMember: (projectId, userId) => api.post(`/projects/${projectId}/demote/${userId}`),
   getActivityLog: (projectId) => api.get(`/projects/${projectId}/activity`),
 };
 
@@ -59,7 +61,7 @@ const taskApi = {
   updateTask: (taskId, updates) => api.put(`/tasks/${taskId}`, updates),
   deleteTask: (taskId) => api.delete(`/tasks/${taskId}`),
   addCommentToTask: (taskId, commentData) => api.post(`/tasks/${taskId}/comments`, commentData),
-  reorderTasks: (reorderData) => api.patch('/tasks/reorder', reorderData),
+  reorderTasks: (reorderData) => api.post('/tasks/reorder', reorderData),
 };
 
 export default {

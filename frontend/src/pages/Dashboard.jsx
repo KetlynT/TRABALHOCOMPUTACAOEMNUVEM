@@ -130,7 +130,7 @@ function Dashboard() {
                                 >
                                     <h3 className="text-lg font-medium text-indigo-700 dark:text-indigo-300">{project.name}</h3>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                                        Membros: {project.memberCount}
+                                        Membros: {project.memberCount}, incluindo você
                                     </p>
                                 </Link>
                             ))

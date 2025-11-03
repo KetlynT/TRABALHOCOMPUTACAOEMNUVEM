@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\ProjectManagement.Api.csproj": {}
+    "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\ProjectManagement.Api.csproj": {}
   },
   "projects": {
-    "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\ProjectManagement.Api.csproj": {
+    "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\ProjectManagement.Api.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\ProjectManagement.Api.csproj",
+        "projectUniqueName": "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\ProjectManagement.Api.csproj",
         "projectName": "ProjectManagement.Api",
-        "projectPath": "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\ProjectManagement.Api.csproj",
+        "projectPath": "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\ProjectManagement.Api.csproj",
         "packagesPath": "C:\\Users\\danie\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\obj\\",
+        "outputPath": "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

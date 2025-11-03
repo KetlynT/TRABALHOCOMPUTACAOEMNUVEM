@@ -12,7 +12,7 @@ namespace ProjectManagement.Api.Services
             _context = context;
         }
 
-        public async Task LogActivityAsync(string description, string userId, Guid? projectId, Guid? taskItemId = null)
+        public void LogActivity(string description, string userId, Guid? projectId, Guid? taskItemId = null)
         {
             var log = new ActivityLog 
             {
@@ -24,6 +24,11 @@ namespace ProjectManagement.Api.Services
             };
             
             _context.ActivityLogs.Add(log);
+        }
+        
+        public async Task LogActivityAsync(string description, string userId, Guid? projectId, Guid? taskItemId = null)
+        {
+            LogActivity(description, userId, projectId, taskItemId);
             await _context.SaveChangesAsync();
         }
     }

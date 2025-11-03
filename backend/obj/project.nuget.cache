@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "t2kU2ItdDYg=",
+  "dgSpecHash": "bY3SuTPbBN8=",
   "success": true,
-  "projectFilePath": "C:\\Users\\danie\\OneDrive\\TRABALHOCOMPUTACAOEMNUVEMMULTIPLATAFORMA\\backend\\ProjectManagement.Api.csproj",
+  "projectFilePath": "C:\\Users\\danie\\Downloads\\PROJETO\\TRABALHOCOMPUTACAOEMNUVEM\\backend\\ProjectManagement.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\danie\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
     "C:\\Users\\danie\\.nuget\\packages\\microsoft.aspnetcore.authentication.jwtbearer\\8.0.0\\microsoft.aspnetcore.authentication.jwtbearer.8.0.0.nupkg.sha512",

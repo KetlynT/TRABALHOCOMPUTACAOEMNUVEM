@@ -47,13 +47,15 @@ namespace ProjectManagement.Api.Controllers
             var userId = GetUserId();
             var projects = await _context.Projects
                 .Where(p => p.OwnerId == userId || p.Members.Any(m => m.UserId == userId))
+                .Include(p => p.Members)
                 .Select(p => new 
                 {
                     p.Id,
                     p.Name,
                     p.Description,
                     p.CreatedAt,
-                    IsOwner = p.OwnerId == userId
+                    IsOwner = p.OwnerId == userId,
+                    MemberCount = p.Members.Count() + 1
                 })
                 .OrderByDescending(p => p.CreatedAt)
                 .ToListAsync();
@@ -73,7 +75,7 @@ namespace ProjectManagement.Api.Controllers
             var project = await _context.Projects
                 .Include(p => p.Owner)
                 .Include(p => p.Boards.OrderBy(b => b.Position))
-                    .ThenInclude(b => b.Tasks.OrderBy(t => t.Position))
+                    .ThenInclude(b => b.Tasks.Where(t => t.DeletedAt == null).OrderBy(t => t.Position))
                 .Include(p => p.Members)
                     .ThenInclude(m => m.User)
                 .Select(p => new 
@@ -85,7 +87,7 @@ namespace ProjectManagement.Api.Controllers
                         b.Id,
                         b.Name,
                         b.Position,
-                        Tasks = b.Tasks.Select(t => new {
+                        Tasks = b.Tasks.Where(t => t.DeletedAt == null).OrderBy(t => t.Position).Select(t => new {
                             t.Id,
                             t.Title,
                             t.Description,

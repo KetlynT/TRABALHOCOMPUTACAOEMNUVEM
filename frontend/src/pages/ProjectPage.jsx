@@ -200,7 +200,7 @@ function ProjectPage() {
                         Membros do Projeto
                     </h2>
                     <div className="space-y-3">
-                        {project.members.length <= 1 ? (
+                        {project.members.length <= 0 ? (
                             <p className="text-gray-600 dark:text-gray-400">
                                 No momento há apenas você nesse projeto.
                             </p>
