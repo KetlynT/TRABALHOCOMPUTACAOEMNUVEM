@@ -135,7 +135,7 @@ function ProjectPage() {
     <div className="project-page" style={{ width: '100%', textAlign: 'left' }}>
       <div className="page-header">
         <Link to="/">&larr; Voltar para o Dashboard</Link>
-        <Link to={`/project/${id}/activity`} className="activity-link">Ver Atividades</Link>
+        <Link to={`/project/${id}/activity`} className="activity-link">Ver Histórico do Projeto</Link>
       </div>
 
       <h1>{project.name}</h1>
