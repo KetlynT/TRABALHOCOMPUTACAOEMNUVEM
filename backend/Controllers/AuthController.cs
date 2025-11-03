@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using ProjectManagement.Api.Data;
 using ProjectManagement.Api.Domain;
@@ -32,7 +33,7 @@ namespace ProjectManagement.Api.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register(RegisterDto model)
         {
-            var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Name = model.Name };
+            var user = new ApplicationUser { UserName = model.Email, Email = model.Email, FullName = model.FullName };
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
@@ -50,8 +51,12 @@ namespace ProjectManagement.Api.Controllers
             if (result.Succeeded)
             {
                 var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "Usuário não encontrado." });
+                }
                 var token = GenerateJwtToken(user);
-                return Ok(new { token = token, userName = user.Name, userId = user.Id });
+                return Ok(new { token = token, userName = user.FullName, userId = user.Id });
             }
 
             return Unauthorized(new { message = "Login ou senha inválidos." });
@@ -89,6 +94,40 @@ namespace ProjectManagement.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("check-sole-admin")]
+        public async Task<IActionResult> CheckSoleAdmin()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var projectsAsAdmin = await _context.Projects
+                .Where(p => p.OwnerId == userId || p.Members.Any(m => m.UserId == userId && m.IsAdmin))
+                .Include(p => p.Members)
+                .ToListAsync();
+
+            if (!projectsAsAdmin.Any())
+            {
+                return Ok(new { isSoleAdmin = false });
+            }
+            
+            bool isSoleAdminInAny = false;
+            foreach (var project in projectsAsAdmin)
+            {
+                bool creatorIsOtherAdmin = project.OwnerId != userId;
+                
+                bool otherMembersAreAdmins = project.Members.Any(m => m.UserId != userId && m.IsAdmin);
+                
+                if (!creatorIsOtherAdmin && !otherMembersAreAdmins)
+                {
+                    isSoleAdminInAny = true;
+                    break;
+                }
+            }
+            
+            return Ok(new { isSoleAdmin = isSoleAdminInAny });
+        }
+
+        [Authorize]
         [HttpDelete("delete-account")]
         public async Task<IActionResult> DeleteAccount()
         {
@@ -120,7 +159,7 @@ namespace ProjectManagement.Api.Controllers
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
-                new Claim(JwtRegisteredClaimNames.Name, user.Name),
+                new Claim(JwtRegisteredClaimNames.Name, user.FullName ?? string.Empty),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

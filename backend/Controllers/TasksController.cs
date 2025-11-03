@@ -108,6 +108,31 @@ namespace ProjectManagement.Api.Controllers
             return Ok(task);
         }
 
+        [HttpDelete("{taskId}")]
+        public async Task<IActionResult> DeleteTask(Guid taskId)
+        {
+            var userId = GetUserId();
+            var projectId = await _accessService.GetProjectIdFromTask(taskId);
+            
+            if (!await _accessService.IsProjectAdmin(userId, projectId))
+            {
+                return Forbid("Apenas administradores do projeto podem excluir tarefas.");
+            }
+
+            var task = await _context.Tasks.FindAsync(taskId);
+            if (task == null)
+            {
+                return NotFound("Tarefa não encontrada.");
+            }
+
+            _context.Tasks.Remove(task);
+            await _context.SaveChangesAsync();
+
+            await _activityService.LogActivityAsync($"Tarefa '{task.Title}' foi excluída.", userId, projectId, task.Id);
+
+            return Ok(new { message = "Tarefa excluída com sucesso." });
+        }
+
         [HttpPost("{taskId}/comments")]
         public async Task<IActionResult> AddComment(Guid taskId, [FromBody] Comment commentDto)
         {
@@ -168,7 +193,6 @@ namespace ProjectManagement.Api.Controllers
                 return Forbid();
             }
             
-            // Verifique se o quadro de destino também está no projeto
             var destProjectId = await _accessService.GetProjectIdFromBoard(reorderDto.DestinationBoardId);
             if(projectId != destProjectId)
             {

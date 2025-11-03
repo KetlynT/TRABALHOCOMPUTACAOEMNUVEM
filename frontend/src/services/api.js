@@ -23,11 +23,20 @@ export const deleteAccount = () => {
     return api.delete('/auth/delete-account');
 };
 
+export const checkSoleAdmin = () => {
+    return api.get('/auth/check-sole-admin');
+};
+
 export const getProjects = () => api.get('/projects');
 export const createProject = (projectData) => api.post('/projects', projectData);
 export const getProjectDetails = (projectId) => api.get(`/projects/${projectId}`);
 export const joinProject = (inviteCode) => api.post('/projects/join', { inviteCode });
 export const getProjectActivity = (projectId) => api.get(`/projects/${projectId}/activity`);
+export const deleteProject = (projectId) => api.delete(`/projects/${projectId}`);
+export const generateInviteCode = (projectId) => api.post(`/projects/${projectId}/generate-invite-code`);
+
+export const promoteMember = (projectId, userId) => api.post(`/projects/${projectId}/promote/${userId}`);
+export const demoteMember = (projectId, userId) => api.post(`/projects/${projectId}/demote/${userId}`);
 
 export const createTask = (taskData) => api.post('/tasks', taskData);
 export const updateTask = (taskId, taskData) => api.put(`/tasks/${taskId}`, taskData);
@@ -41,11 +50,16 @@ const apis = {
     login,
     changePassword,
     deleteAccount,
+    checkSoleAdmin,
     getProjects,
     createProject,
     getProjectDetails,
     joinProject,
     getProjectActivity,
+    deleteProject,
+    generateInviteCode,
+    promoteMember,
+    demoteMember,
     createTask,
     updateTask,
     deleteTask,

@@ -33,6 +33,14 @@ namespace ProjectManagement.Api.Controllers
 
         private string GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier)!;
 
+        private string GenerateNewInviteCode()
+        {
+            var chars = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
+            var random = new Random();
+            return new string(Enumerable.Repeat(chars, 8)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+
         [HttpGet]
         public async Task<IActionResult> GetMyProjects()
         {
@@ -63,8 +71,11 @@ namespace ProjectManagement.Api.Controllers
             }
 
             var project = await _context.Projects
+                .Include(p => p.Owner)
                 .Include(p => p.Boards.OrderBy(b => b.Position))
-                .ThenInclude(b => b.Tasks.OrderBy(t => t.Position))
+                    .ThenInclude(b => b.Tasks.OrderBy(t => t.Position))
+                .Include(p => p.Members)
+                    .ThenInclude(m => m.User)
                 .Select(p => new 
                 {
                     p.Id,
@@ -72,7 +83,10 @@ namespace ProjectManagement.Api.Controllers
                     p.Description,
                     p.Boards,
                     p.InviteCode,
-                    IsOwner = p.OwnerId == userId
+                    CreatorId = p.OwnerId,
+                    CreatorName = p.Owner != null ? p.Owner.FullName : "Dono Desconhecido",
+                    IsAdmin = (p.OwnerId == userId) || p.Members.Any(m => m.UserId == userId && m.IsAdmin),
+                    Members = p.Members.Select(m => new { m.UserId, m.User.FullName, m.IsAdmin })
                 })
                 .FirstOrDefaultAsync(p => p.Id == id);
 
@@ -117,7 +131,8 @@ namespace ProjectManagement.Api.Controllers
             {
                 Name = dto.Name,
                 Description = dto.Description,
-                OwnerId = userId
+                OwnerId = userId,
+                InviteCode = GenerateNewInviteCode()
             };
 
             project.Boards.Add(new Board { Name = "A Fazer", Position = 0 });
@@ -143,23 +158,18 @@ namespace ProjectManagement.Api.Controllers
         public async Task<IActionResult> GenerateInviteCode(Guid id)
         {
             var userId = GetUserId();
-            var project = await _context.Projects.FirstOrDefaultAsync(p => p.Id == id && p.OwnerId == userId);
-            
-            if (project == null)
+            if (!await _accessService.IsProjectAdmin(userId, id))
             {
-                return Forbid("Apenas o dono do projeto pode gerar um código.");
+                return Forbid("Apenas administradores do projeto podem gerar um código.");
             }
             
-            // Gera um código alfanumérico simples de 8 dígitos
-            var chars = "ABCDEFGHIJKLMNPQRSTUVWXYZ123456789";
-            var random = new Random();
-            var code = new string(Enumerable.Repeat(chars, 8)
-                .Select(s => s[random.Next(s.Length)]).ToArray());
-
-            project.InviteCode = code;
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null) return NotFound();
+            
+            project.InviteCode = GenerateNewInviteCode();
             await _context.SaveChangesAsync();
 
-            return Ok(new { inviteCode = code });
+            return Ok(new { inviteCode = project.InviteCode });
         }
 
         [HttpPost("join")]
@@ -183,7 +193,8 @@ namespace ProjectManagement.Api.Controllers
             var member = new ProjectMember
             {
                 ProjectId = project.Id,
-                UserId = userId
+                UserId = userId,
+                IsAdmin = false
             };
 
             _context.ProjectMembers.Add(member);
@@ -200,6 +211,101 @@ namespace ProjectManagement.Api.Controllers
                 project.CreatedAt,
                 IsOwner = false
             });
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeleteProject(Guid id)
+        {
+            var userId = GetUserId();
+            if (!await _accessService.IsProjectAdmin(userId, id))
+            {
+                return Forbid("Apenas administradores do projeto podem excluí-lo.");
+            }
+
+            var project = await _context.Projects.FindAsync(id);
+            if (project == null)
+            {
+                return NotFound("Projeto não encontrado.");
+            }
+
+            _context.Projects.Remove(project);
+            await _context.SaveChangesAsync();
+            
+            return Ok(new { message = "Projeto excluído com sucesso." });
+        }
+
+        [HttpPost("{projectId}/promote/{userId}")]
+        public async Task<IActionResult> PromoteMember(Guid projectId, string userId)
+        {
+            var currentUserId = GetUserId();
+            if (!await _accessService.IsProjectAdmin(currentUserId, projectId))
+            {
+                return Forbid("Apenas administradores podem promover outros usuários.");
+            }
+
+            if (currentUserId == userId)
+            {
+                return BadRequest("Você não pode alterar seu próprio status.");
+            }
+
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project.OwnerId == userId)
+            {
+                return BadRequest("O criador do projeto já é um administrador e não pode ser alterado.");
+            }
+
+            var member = await _context.ProjectMembers
+                .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == userId);
+
+            if (member == null)
+            {
+                return NotFound("Membro não encontrado no projeto.");
+            }
+
+            member.IsAdmin = true;
+            await _context.SaveChangesAsync();
+            
+            var promotedUser = await _userManager.FindByIdAsync(userId);
+            await _activityService.LogActivityAsync($"'{promotedUser?.FullName}' foi promovido a administrador.", currentUserId, projectId);
+
+            return Ok(new { message = "Usuário promovido a administrador." });
+        }
+
+        [HttpPost("{projectId}/demote/{userId}")]
+        public async Task<IActionResult> DemoteMember(Guid projectId, string userId)
+        {
+            var currentUserId = GetUserId();
+            if (!await _accessService.IsProjectAdmin(currentUserId, projectId))
+            {
+                return Forbid("Apenas administradores podem rebaixar outros usuários.");
+            }
+
+            if (currentUserId == userId)
+            {
+                return BadRequest("Você não pode alterar seu próprio status.");
+            }
+
+            var project = await _context.Projects.FindAsync(projectId);
+            if (project.OwnerId == userId)
+            {
+                return BadRequest("O criador do projeto não pode ser rebaixado.");
+            }
+
+            var member = await _context.ProjectMembers
+                .FirstOrDefaultAsync(m => m.ProjectId == projectId && m.UserId == userId);
+
+            if (member == null)
+            {
+                return NotFound("Membro não encontrado no projeto.");
+            }
+
+            member.IsAdmin = false;
+            await _context.SaveChangesAsync();
+            
+            var demotedUser = await _userManager.FindByIdAsync(userId);
+            await _activityService.LogActivityAsync($"'{demotedUser?.FullName}' foi rebaixado para membro.", currentUserId, projectId);
+
+            return Ok(new { message = "Usuário rebaixado a membro." });
         }
     }
 }

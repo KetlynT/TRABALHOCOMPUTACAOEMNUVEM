@@ -1,96 +1,88 @@
 import React, { useState } from 'react';
-import { Droppable, Draggable } from 'react-beautiful-dnd';
+import { Draggable, Droppable } from 'react-beautiful-dnd';
 import TaskCard from './TaskCard';
-import TaskModal from './TaskModal';
 import api from '../services/api';
 
-function Board({ board, onTaskAdded }) {
-    const [isModalOpen, setIsModalOpen] = useState(false);
+function Board({ board, onTaskAdded, isAdmin }) {
     const [newTaskTitle, setNewTaskTitle] = useState('');
-    const [selectedTask, setSelectedTask] = useState(null);
+    const [isAddingTask, setIsAddingTask] = useState(false);
 
-    const handleOpenModal = () => setIsModalOpen(true);
-    const handleCloseModal = () => setIsModalOpen(false);
-
-    const handleCreateTask = async (e) => {
+    const handleAddTask = async (e) => {
         e.preventDefault();
         if (!newTaskTitle.trim()) return;
+
         try {
             await api.createTask({
                 title: newTaskTitle,
-                boardId: board.id
+                boardId: board.id,
             });
             setNewTaskTitle('');
+            setIsAddingTask(false);
             onTaskAdded();
         } catch (error) {
             console.error('Failed to create task:', error);
         }
     };
 
-    const handleTaskClick = (task) => {
-        setSelectedTask(task);
-    };
-
-    const handleCloseTaskModal = () => {
-        setSelectedTask(null);
-        onTaskAdded();
-    };
-
     return (
-        <div className="bg-gray-200 dark:bg-gray-800 rounded-lg p-4 w-80 flex-shrink-0">
-            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
-                {board.name} ({board.tasks.length})
+        <div className="bg-gray-100 dark:bg-gray-700 rounded-lg shadow-md w-72 flex-shrink-0">
+            <h3 className="text-lg font-semibold p-4 text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600">
+                {board.name}
             </h3>
-
             <Droppable droppableId={board.id.toString()}>
-                {(provided, snapshot) => (
+                {(provided) => (
                     <div
-                        ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`space-y-3 min-h-[200px] ${snapshot.isDraggingOver ? 'bg-gray-300 dark:bg-gray-700' : ''} transition-colors rounded-md p-2`}
+                        ref={provided.innerRef}
+                        className="p-4 space-y-3 min-h-[100px]"
                     >
                         {board.tasks.map((task, index) => (
-                            <Draggable key={task.id} draggableId={task.id.toString()} index={index}>
-                                {(provided) => (
-                                    <div
-                                        ref={provided.innerRef}
-                                        {...provided.draggableProps}
-                                        {...provided.dragHandleProps}
-                                        onClick={() => handleTaskClick(task)}
-                                    >
-                                        <TaskCard task={task} />
-                                    </div>
-                                )}
-                            </Draggable>
+                            <TaskCard 
+                                key={task.id} 
+                                task={task} 
+                                index={index} 
+                                onTaskDeleted={onTaskAdded}
+                                isAdmin={isAdmin}
+                            />
                         ))}
                         {provided.placeholder}
                     </div>
                 )}
             </Droppable>
-
-            <form onSubmit={handleCreateTask} className="mt-4">
-                <input
-                    type="text"
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    placeholder="Nova tarefa..."
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm"
-                />
-                <button
-                    type="submit"
-                    className="w-full mt-2 py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm"
-                >
-                    Adicionar Tarefa
-                </button>
-            </form>
-
-            {selectedTask && (
-                <TaskModal
-                    isOpen={!!selectedTask}
-                    onClose={handleCloseTaskModal}
-                    task={selectedTask}
-                />
-            )}
+            <div className="p-4 border-t border-gray-200 dark:border-gray-600">
+                {isAddingTask ? (
+                    <form onSubmit={handleAddTask}>
+                        <textarea
+                            value={newTaskTitle}
+                            onChange={(e) => setNewTaskTitle(e.target.value)}
+                            placeholder="Digite o título da tarefa..."
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm bg-white dark:bg-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        />
+                        <div className="flex items-center justify-end space-x-2 mt-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsAddingTask(false)}
+                                className="px-3 py-1 text-sm text-gray-700 dark:text-gray-300"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                className="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm hover:bg-indigo-700"
+                            >
+                                Adicionar
+                            </button>
+                        </div>
+                    </form>
+                ) : (
+                    <button
+                        onClick={() => setIsAddingTask(true)}
+                        className="w-full text-left text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                    >
+                        + Adicionar uma tarefa
+                    </button>
+                )}
+            </div>
         </div>
     );
 }
