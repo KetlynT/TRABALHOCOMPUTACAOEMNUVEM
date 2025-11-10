@@ -2,6 +2,7 @@ FROM node:20 AS build
 WORKDIR /app
 COPY package*.json ./
 RUN rm -f package-lock.json && npm cache clean --force
+RUN npm install -g patch-package
 RUN npm install
 COPY . .
 RUN npm run build
