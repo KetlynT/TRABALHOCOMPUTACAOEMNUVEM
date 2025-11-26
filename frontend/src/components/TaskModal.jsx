@@ -4,6 +4,7 @@ import ConfirmModal from './ConfirmModal';
 
 function TaskModal({ isOpen, onClose, task, onTaskDeleted, isAdmin }) {
     const [details, setDetails] = useState(null);
+    const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState('');
     const [taskTitle, setTaskTitle] = useState(task.title);
@@ -30,9 +31,20 @@ function TaskModal({ isOpen, onClose, task, onTaskDeleted, isAdmin }) {
         }
     };
 
+    const fetchComments = async () => {
+        if (!task) return;
+        try {
+            const res = await api.getTaskComments(task.id);
+            setComments(res.data);
+        } catch (error) {
+            console.error('Failed to fetch comments:', error);
+        }
+    };
+
     useEffect(() => {
         if (isOpen) {
             fetchTaskDetails();
+            fetchComments();
         }
     }, [isOpen, task]);
 
@@ -60,7 +72,7 @@ function TaskModal({ isOpen, onClose, task, onTaskDeleted, isAdmin }) {
         try {
             await api.addCommentToTask(task.id, { content: newComment });
             setNewComment('');
-            fetchTaskDetails();
+            fetchComments();
             onTaskDeleted();
         } catch (error) {
             console.error('Failed to add comment:', error);
@@ -147,11 +159,11 @@ function TaskModal({ isOpen, onClose, task, onTaskDeleted, isAdmin }) {
                                     </button>
                                 </form>
                                 <div className="space-y-4 max-h-60 overflow-y-auto">
-                                    {details?.comments?.length > 0 ? (
-                                        details.comments.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).map(comment => (
+                                    {comments.length > 0 ? (
+                                        comments.map(comment => (
                                             <div key={comment.id} className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md">
                                                 <p className="font-semibold text-sm text-gray-800 dark:text-gray-200">
-                                                    {comment.userName || '[Usuário excluído]'}
+                                                    {comment.authorName || comment.userName || 'Usuário'}
                                                 </p>
                                                 <p className="text-gray-700 dark:text-gray-300">{comment.content}</p>
                                                 <span className="text-xs text-gray-500 dark:text-gray-400">

@@ -61,6 +61,7 @@ const taskApi = {
   updateTask: (taskId, updates) => api.put(`/tasks/${taskId}`, updates),
   deleteTask: (taskId) => api.delete(`/tasks/${taskId}`),
   addCommentToTask: (taskId, commentData) => api.post(`/tasks/${taskId}/comments`, commentData),
+  getTaskComments: (taskId) => api.get(`/tasks/${taskId}/comments`),
   reorderTasks: (reorderData) => api.post('/tasks/reorder', reorderData),
 };
 

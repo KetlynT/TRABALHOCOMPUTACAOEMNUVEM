@@ -156,28 +156,34 @@ namespace ProjectManagement.Api.Controllers
         }
 
         [HttpPost("{taskId}/comments")]
-        public async Task<IActionResult> AddComment(Guid taskId, [FromBody] Comment commentDto)
+        public async Task<IActionResult> AddComment(Guid taskId, [FromBody] CommentCreateDto commentDto) // Alterado para usar o DTO
         {
+            // 1. Validações de acesso (mantém igual)
             var projectId = await _accessService.GetProjectIdFromTask(taskId);
             if (!await _accessService.CanAccessProject(GetUserId(), projectId))
             {
-                return Forbid();
+            return Forbid();
             }
 
             var task = await _context.Tasks.FirstOrDefaultAsync(t => t.Id == taskId && t.DeletedAt == null);
             if (task == null) return NotFound("Tarefa não encontrada.");
 
+            // 2. Criação da entidade usando os dados do DTO e do contexto atual
             var comment = new Comment
             {
-                Content = commentDto.Content,
+                Content = commentDto.Content, // Pega do DTO
                 TaskItemId = taskId,
-                AuthorId = GetUserId()
+                AuthorId = GetUserId(),       // Define o autor aqui no backend
+                CreatedAt = DateTime.UtcNow   // Garante a data correta
             };
 
             _context.Comments.Add(comment);
             await _context.SaveChangesAsync();
+    
+            // Log de atividade
             await _activityService.LogActivityAsync($"Novo comentário em '{task.Title}'.", GetUserId(), projectId, task.Id);
 
+            // Retorna o objeto criado (pode retornar o próprio comment ou mapear para um DTO de leitura)
             return Ok(comment);
         }
         
